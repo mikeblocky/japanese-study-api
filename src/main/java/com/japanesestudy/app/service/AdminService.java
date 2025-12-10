@@ -243,6 +243,82 @@ public class AdminService {
             }
         }
 
+        // Import Courses / Topics / Items
+        if (data.containsKey("courses")) {
+            List<Map<String, Object>> courses = (List<Map<String, Object>>) data.get("courses");
+            for (Map<String, Object> courseData : courses) {
+                // 1. Create/Find Course
+                String courseTitle = (String) courseData.get("title");
+                var existingCourse = courseRepository.findAll().stream()
+                        .filter(c -> c.getTitle().equals(courseTitle))
+                        .findFirst();
+
+                com.japanesestudy.app.model.Course course;
+                if (existingCourse.isPresent()) {
+                    course = existingCourse.get();
+                } else {
+                    course = new com.japanesestudy.app.model.Course();
+                    course.setTitle(courseTitle);
+                    course.setDescription((String) courseData.get("description"));
+                    course = courseRepository.save(course);
+                    importCount++;
+                }
+
+                // 2. Topics
+                if (courseData.containsKey("topics")) {
+                    List<Map<String, Object>> topics = (List<Map<String, Object>>) courseData.get("topics");
+                    for (Map<String, Object> topicData : topics) {
+                        String topicTitle = (String) topicData.get("title");
+
+                        // Check if topic exists in this course
+                        var finalCourseId = course.getId();
+                        var existingTopic = topicRepository.findByCourseId(finalCourseId).stream()
+                                .filter(t -> t.getTitle().equals(topicTitle))
+                                .findFirst();
+
+                        com.japanesestudy.app.model.Topic topic;
+                        if (existingTopic.isPresent()) {
+                            topic = existingTopic.get();
+                        } else {
+                            topic = new com.japanesestudy.app.model.Topic();
+                            topic.setTitle(topicTitle);
+                            topic.setDescription((String) topicData.get("description"));
+                            topic.setCourse(course);
+                            topic = topicRepository.save(topic);
+                            importCount++;
+                        }
+
+                        // 3. Items
+                        if (topicData.containsKey("items")) {
+                            List<Map<String, Object>> items = (List<Map<String, Object>>) topicData.get("items");
+                            for (Map<String, Object> itemData : items) {
+                                com.japanesestudy.app.model.StudyItem item = new com.japanesestudy.app.model.StudyItem();
+
+                                // Handle mismatched field names (JSON vs Java)
+                                String primary = (String) itemData.getOrDefault("primaryText",
+                                        itemData.getOrDefault("word", ""));
+                                String secondary = (String) itemData.getOrDefault("secondaryText",
+                                        itemData.getOrDefault("reading", ""));
+                                String meaning = (String) itemData.getOrDefault("meaning", "");
+                                String detailed = (String) itemData.getOrDefault("detailedInfo",
+                                        itemData.getOrDefault("exampleSentence", ""));
+
+                                item.setPrimaryText(primary);
+                                item.setSecondaryText(secondary);
+                                item.setMeaning(meaning);
+                                item.setDetailedInfo(detailed);
+                                item.setAudioUrl((String) itemData.getOrDefault("audioUrl", ""));
+                                item.setTopic(topic);
+
+                                studyItemRepository.save(item);
+                                importCount++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return importCount;
     }
 
