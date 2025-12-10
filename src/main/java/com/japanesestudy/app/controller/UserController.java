@@ -24,6 +24,21 @@ public class UserController {
         return userService.getUserById(id);
     }
 
+    @GetMapping("/users/check-role")
+    public org.springframework.http.ResponseEntity<?> checkRole(@RequestParam String email) {
+        // Direct repo access would be easier but let's assume Service needs update.
+        // Actually, for speed, let's just cheat and add a method to UserService?
+        // No, I can't edit UserService easily without viewing it.
+        // Wait, UserController injects UserService.
+
+        // I will trust that I can update UserService next.
+        User user = userService.getUserByEmail(email);
+        if (user != null) {
+            return org.springframework.http.ResponseEntity.ok(java.util.Map.of("role", user.getRole()));
+        }
+        return org.springframework.http.ResponseEntity.notFound().build();
+    }
+
     @PostMapping("/auth/login")
     public org.springframework.http.ResponseEntity<?> login(@RequestBody LoginRequest request) {
         // Simple mock auth for prototype

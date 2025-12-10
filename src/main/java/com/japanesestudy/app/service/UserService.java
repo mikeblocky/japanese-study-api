@@ -28,6 +28,10 @@ public class UserService {
         return userRepository.findByUsername(username).orElse(null);
     }
 
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
+    }
+
     public User getUserById(Long id) {
         return userRepository.findById(id).orElse(null);
     }
