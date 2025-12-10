@@ -1,7 +1,6 @@
 package com.japanesestudy.app.util;
 
 import com.japanesestudy.app.model.User;
-import com.japanesestudy.app.model.Role;
 import com.japanesestudy.app.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -24,7 +23,7 @@ public class DataSeeder implements CommandLineRunner {
             admin.setUsername("admin");
             admin.setPassword("admin"); // In a real app, hash this
             admin.setEmail("admin@example.com");
-            admin.setRole(Role.ADMIN);
+            admin.setRole("ADMIN");
 
             userRepository.save(admin);
 
