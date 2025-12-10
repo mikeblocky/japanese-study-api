@@ -1,0 +1,27 @@
+# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Logs
+*.log
+logs/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+application-local.properties
+
+# H2 database files
+*.db
+*.mv.db
+*.trace.db
