@@ -33,6 +33,6 @@ services:
           name: japanese-study-db
           property: password
       - key: CORS_ORIGINS
-        value: "*"
+        value: "https://japanese-study-seven.vercel.app"
       - key: PORT
         value: "8080"
