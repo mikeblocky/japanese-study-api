@@ -12,11 +12,27 @@ services:
     dockerContext: .
     plan: free
     envVars:
-      - key: DATABASE_URL
+      - key: PGHOST
         fromDatabase:
           name: japanese-study-db
-          property: connectionString
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: japanese-study-db
+          property: port
+      - key: PGDATABASE
+        fromDatabase:
+          name: japanese-study-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: japanese-study-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: japanese-study-db
+          property: password
       - key: CORS_ORIGINS
-        value: https://your-frontend.vercel.app
+        value: "*"
       - key: PORT
-        value: 8080
+        value: "8080"
