@@ -34,5 +34,7 @@ services:
           property: password
       - key: CORS_ORIGINS
         value: "https://japanese-study-seven.vercel.app"
+      - key: JWT_SECRET
+        value: "prodJwtSecretKey2024JapaneseStudyAppSecureToken"
       - key: PORT
         value: "8080"

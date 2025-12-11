@@ -1,6 +1,6 @@
 package com.japanesestudy.app.repository;
 
-import com.japanesestudy.app.model.ItemType;
+import com.japanesestudy.app.entity.ItemType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

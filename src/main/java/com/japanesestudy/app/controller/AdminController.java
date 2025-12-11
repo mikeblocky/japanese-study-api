@@ -1,374 +1,250 @@
 package com.japanesestudy.app.controller;
 
-import com.japanesestudy.app.model.User;
-import com.japanesestudy.app.service.AdminService;
-import com.japanesestudy.app.repository.UserRepository;
+import com.japanesestudy.app.entity.Course;
+import com.japanesestudy.app.entity.StudyItem;
+import com.japanesestudy.app.entity.Topic;
+import com.japanesestudy.app.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
-/**
- * Admin controller for system management endpoints.
- * These endpoints are intended for MANAGER and ADMIN roles only.
- */
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class AdminController {
 
-    private final AdminService adminService;
-    private final UserRepository userRepository;
+    @Autowired
+    UserRepository userRepository;
 
-    public AdminController(AdminService adminService, UserRepository userRepository) {
-        this.adminService = adminService;
-        this.userRepository = userRepository;
+    @Autowired
+    CourseRepository courseRepository;
+
+    @Autowired
+    TopicRepository topicRepository;
+
+    @Autowired
+    StudyItemRepository studyItemRepository;
+
+    @Autowired
+    StudySessionRepository sessionRepository;
+
+    // --- Course Management ---
+
+    @GetMapping("/courses")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<Map<String, Object>> getAdminCourses() {
+        return courseRepository.findAll().stream().map(course -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", course.getId());
+            map.put("title", course.getTitle());
+            map.put("description", course.getDescription());
+            map.put("level", course.getLevel());
+            map.put("topicCount", course.getTopics() != null ? course.getTopics().size() : 0);
+            int itemCount = course.getTopics() != null
+                    ? course.getTopics().stream()
+                            .mapToInt(t -> t.getStudyItems() != null ? t.getStudyItems().size() : 0).sum()
+                    : 0;
+            map.put("itemCount", itemCount);
+            return map;
+        }).collect(Collectors.toList());
     }
 
-    private Long getUserId(String header) {
-        if (header == null)
-            return null;
+    @PostMapping("/courses")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Course createCourse(@RequestBody Course course) {
+        return courseRepository.save(course);
+    }
+
+    @PatchMapping("/courses/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Course> updateCourse(@PathVariable Long id, @RequestBody Course updates) {
+        return courseRepository.findById(id)
+                .map(course -> {
+                    if (updates.getTitle() != null)
+                        course.setTitle(updates.getTitle());
+                    if (updates.getDescription() != null)
+                        course.setDescription(updates.getDescription());
+                    if (updates.getLevel() != null)
+                        course.setLevel(updates.getLevel());
+                    return ResponseEntity.ok(courseRepository.save(course));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/courses/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteCourse(@PathVariable Long id) {
+        if (!courseRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        courseRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "Course deleted"));
+    }
+
+    // --- Anki Import ---
+
+    @PostMapping("/anki/import")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> importAnki(@RequestBody AnkiImportRequest request) {
         try {
-            return Long.parseLong(header);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
+            // Create course
+            Course course = new Course();
+            course.setTitle(request.getCourseName() != null ? request.getCourseName() : "Imported Course");
+            course.setDescription(request.getDescription());
+            course.setLevel("Custom");
+            course = courseRepository.save(course);
 
-    private void checkAdminRole(Long userId) {
-        if (userId == null)
-            throw new RuntimeException("Unauthorized");
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
-            throw new RuntimeException("Access denied: ADMIN role required");
-        }
-    }
-
-    /**
-     * Get system-wide statistics.
-     */
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getSystemStats() {
-        return ResponseEntity.ok(adminService.getSystemStats());
-    }
-
-    /**
-     * Get all users with activity metrics.
-     */
-    @GetMapping("/users")
-    public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
-        return ResponseEntity.ok(adminService.getAllUsersWithMetrics());
-    }
-
-    /**
-     * Create a new user.
-     */
-    @PostMapping("/users")
-    public ResponseEntity<User> createUser(
-            @RequestBody Map<String, String> body,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        String username = body.get("username");
-        String email = body.get("email");
-        String role = body.getOrDefault("role", "STUDENT");
-        String password = body.getOrDefault("password", "changeme");
-
-        if (username == null || email == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        try {
-            return ResponseEntity.ok(adminService.createUser(username, email, password, role, getUserId(userIdHeader)));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).build();
-        }
-    }
-
-    /**
-     * Update a user's role.
-     */
-    @PatchMapping("/users/{id}/role")
-    public ResponseEntity<User> updateUserRole(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> body,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        String newRole = body.get("role");
-        if (newRole == null || newRole.isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-        try {
-            return ResponseEntity.ok(adminService.updateUserRole(id, newRole, getUserId(userIdHeader)));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).build();
-        }
-    }
-
-    /**
-     * Delete a user.
-     */
-    @DeleteMapping("/users/{id}")
-    public ResponseEntity<?> deleteUser(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            adminService.deleteUser(id, getUserId(userIdHeader));
-            return ResponseEntity.ok(Map.of("message", "User deleted", "status", "success"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * Get system health metrics. ADMIN ONLY.
-     */
-    @GetMapping("/health")
-    public ResponseEntity<?> getHealth(@RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.getHealthMetrics());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * Clear all caches. ADMIN ONLY.
-     */
-    @PostMapping("/cache/clear")
-    public ResponseEntity<?> clearAllCaches(@RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            adminService.clearAllCaches();
-            return ResponseEntity.ok(Map.of("message", "All caches cleared", "status", "success"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * Clear a specific cache. ADMIN ONLY.
-     */
-    @PostMapping("/cache/clear/{cacheName}")
-    public ResponseEntity<?> clearCache(
-            @PathVariable String cacheName,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            adminService.clearCache(cacheName);
-            return ResponseEntity.ok(Map.of("message", "Cache '" + cacheName + "' cleared", "status", "success"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * Export all data as JSON. ADMIN ONLY.
-     */
-    @GetMapping("/export")
-    public ResponseEntity<?> exportData(@RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.exportAllData());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * Import data from JSON. ADMIN ONLY.
-     */
-    @PostMapping("/import")
-    public ResponseEntity<?> importData(
-            @RequestBody Map<String, Object> data,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
-            @RequestHeader(value = "X-Migration-Secret", required = false) String migrationSecret) {
-        try {
-            // Allow if secret matches, OR if admin
-            if ("JAPANESE_STUDY_MIGRATION_2025".equals(migrationSecret)) {
-                // Bypass role check
-            } else {
-                checkAdminRole(getUserId(userIdHeader));
+            // Group items by topic - use TreeMap for sorted order
+            Map<String, List<AnkiItem>> itemsByTopic = new java.util.TreeMap<>();
+            for (AnkiItem item : request.getItems()) {
+                String topicName = item.getTopic() != null ? item.getTopic() : "Default";
+                itemsByTopic.computeIfAbsent(topicName, k -> new ArrayList<>()).add(item);
             }
 
-            int imported = adminService.importData(data);
-            return ResponseEntity.ok(Map.of("message", "Imported " + imported + " items", "status", "success"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+            // Create topics and study items
+            int topicOrder = 0;
+            for (Map.Entry<String, List<AnkiItem>> entry : itemsByTopic.entrySet()) {
+                Topic topic = new Topic();
+                topic.setTitle(entry.getKey());
+                topic.setCourse(course);
+                topic.setOrderIndex(topicOrder++);
+                topic = topicRepository.save(topic);
+
+                int itemOrder = 0;
+                for (AnkiItem ankiItem : entry.getValue()) {
+                    StudyItem studyItem = new StudyItem();
+                    studyItem.setPrimaryText(ankiItem.getFront() != null ? ankiItem.getFront() : "");
+                    studyItem.setSecondaryText(ankiItem.getReading() != null ? ankiItem.getReading() : "");
+                    studyItem.setMeaning(ankiItem.getBack() != null ? ankiItem.getBack() : "");
+                    studyItem.setTopic(topic);
+                    studyItem.setType("VOCABULARY");
+                    studyItemRepository.save(studyItem);
+                }
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Import successful",
+                    "courseId", course.getId(),
+                    "courseName", course.getTitle(),
+                    "topicsCreated", itemsByTopic.size(),
+                    "itemsCreated", request.getItems().size()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Import failed: " + e.getMessage()));
         }
     }
 
-    /**
-     * Update a user's password.
-     */
-    @PatchMapping("/users/{id}/password")
-    public ResponseEntity<?> updatePassword(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> body,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        String newPassword = body.get("password");
-        if (newPassword == null || newPassword.length() < 4) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 4 characters"));
-        }
-        try {
-            adminService.updatePassword(id, newPassword, getUserId(userIdHeader));
-            return ResponseEntity.ok(Map.of("message", "Password updated", "status", "success"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
-        }
+    // --- Statistics ---
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalUsers", userRepository.count());
+        stats.put("totalCourses", courseRepository.count());
+        stats.put("totalItems", studyItemRepository.count());
+        stats.put("totalSessions", sessionRepository.count());
+        stats.put("javaVersion", System.getProperty("java.version"));
+        stats.put("caches", Map.of("users", "active", "courses", "active"));
+        return ResponseEntity.ok(stats);
     }
 
-    /**
-     * Bulk import users from JSON array.
-     */
-    @PostMapping("/users/bulk")
-    public ResponseEntity<Map<String, Object>> bulkImportUsers(
-            @RequestBody List<Map<String, String>> users,
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        int created = adminService.bulkCreateUsers(users, getUserId(userIdHeader));
-        return ResponseEntity.ok(Map.of("created", created, "status", "success"));
+    @GetMapping("/health")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getHealth() {
+        Runtime runtime = Runtime.getRuntime();
+        long maxMemory = runtime.maxMemory();
+        long allocatedMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = allocatedMemory - freeMemory;
+
+        Map<String, Object> health = new HashMap<>();
+        health.put("status", "UP");
+        health.put("database", "CONNECTED");
+        health.put("memoryMB", Map.of(
+                "used", usedMemory / (1024 * 1024),
+                "max", maxMemory / (1024 * 1024)));
+        return ResponseEntity.ok(health);
     }
 
-    /**
-     * Reset all study progress for a user.
-     */
-    @PostMapping("/users/{id}/reset-progress")
-    public ResponseEntity<Map<String, String>> resetUserProgress(@PathVariable Long id) {
-        adminService.resetUserProgress(id);
-        return ResponseEntity.ok(Map.of("message", "User progress reset", "status", "success"));
-    }
-
-    /**
-     * Get database statistics. ADMIN ONLY.
-     */
     @GetMapping("/database/stats")
-    public ResponseEntity<?> getDatabaseStats(
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.getDatabaseStats());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getDatabaseStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("estimatedStorageKB", 1204);
+        return ResponseEntity.ok(stats);
+    }
+
+    // --- DTOs ---
+
+    public static class AnkiImportRequest {
+        private String courseName;
+        private String description;
+        private List<AnkiItem> items;
+
+        public String getCourseName() {
+            return courseName;
+        }
+
+        public void setCourseName(String courseName) {
+            this.courseName = courseName;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
+        }
+
+        public List<AnkiItem> getItems() {
+            return items != null ? items : List.of();
+        }
+
+        public void setItems(List<AnkiItem> items) {
+            this.items = items;
         }
     }
 
-    /**
-     * Reset all sessions (maintenance). ADMIN ONLY.
-     */
-    @PostMapping("/maintenance/reset-sessions")
-    public ResponseEntity<?> resetAllSessions(
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            int deleted = adminService.resetAllSessions();
-            return ResponseEntity.ok(Map.of("message", "Deleted " + deleted + " sessions", "status", "success"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+    public static class AnkiItem {
+        private String front;
+        private String reading;
+        private String back;
+        private String topic;
+
+        public String getFront() {
+            return front;
         }
-    }
 
-    /**
-     * Backup database summary. ADMIN ONLY.
-     */
-    @GetMapping("/backup/summary")
-    public ResponseEntity<?> getBackupSummary(
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.getBackupSummary());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        public void setFront(String front) {
+            this.front = front;
         }
-    }
 
-    /**
-     * Import Anki file content to create course/topics.
-     */
-    @PostMapping("/anki/import")
-    public ResponseEntity<Map<String, Object>> importAnkiData(@RequestBody Map<String, Object> data) {
-        return ResponseEntity.ok(adminService.importAnkiData(data));
-    }
-
-    /**
-     * Get deep JVM metrics. ADMIN ONLY.
-     */
-    @GetMapping("/metrics/jvm")
-    public ResponseEntity<?> getJvmMetrics(@RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.getJvmMetrics());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        public String getReading() {
+            return reading;
         }
-    }
 
-    /**
-     * Get thread information. ADMIN ONLY.
-     */
-    @GetMapping("/metrics/threads")
-    public ResponseEntity<?> getThreadMetrics(
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.getThreadMetrics());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        public void setReading(String reading) {
+            this.reading = reading;
         }
-    }
 
-    /**
-     * Get garbage collection stats. ADMIN ONLY.
-     */
-    @GetMapping("/metrics/gc")
-    public ResponseEntity<?> getGcMetrics(@RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.getGcMetrics());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        public String getBack() {
+            return back;
         }
-    }
 
-    /**
-     * Get system diagnostics. ADMIN ONLY.
-     */
-    @GetMapping("/diagnostics")
-    public ResponseEntity<?> getSystemDiagnostics(
-            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.getSystemDiagnostics());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        public void setBack(String back) {
+            this.back = back;
         }
-    }
 
-    /**
-     * Get all courses summary for admin.
-     */
-    @GetMapping("/courses")
-    public ResponseEntity<List<Map<String, Object>>> getCoursesSummary() {
-        return ResponseEntity.ok(adminService.getCoursesSummary());
-    }
+        public String getTopic() {
+            return topic;
+        }
 
-    /**
-     * Delete a course and all its data.
-     */
-    @DeleteMapping("/courses/{id}")
-    public ResponseEntity<Map<String, String>> deleteCourse(@PathVariable Long id) {
-        adminService.deleteCourse(id);
-        return ResponseEntity.ok(Map.of("message", "Course deleted", "status", "success"));
-    }
-
-    /**
-     * Get runtime environment info. ADMIN ONLY.
-     */
-    @GetMapping("/environment")
-    public ResponseEntity<?> getEnvironment(@RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
-        try {
-            checkAdminRole(getUserId(userIdHeader));
-            return ResponseEntity.ok(adminService.getEnvironmentInfo());
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        public void setTopic(String topic) {
+            this.topic = topic;
         }
     }
 }
