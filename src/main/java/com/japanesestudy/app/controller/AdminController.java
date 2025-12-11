@@ -82,4 +82,35 @@ public class AdminController {
     public ResponseEntity<?> getDatabaseStats() {
         return ResponseEntity.ok(adminService.getDatabaseStats());
     }
+    // --- User Management ---
+
+    @GetMapping("/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<Map<String, Object>> getUsers() {
+        return adminService.getAllUsers();
+    }
+
+    @PatchMapping("/users/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String role = body.get("role");
+        if (adminService.updateUserRole(id, role)) {
+            return ResponseEntity.ok(Map.of("message", "Role updated"));
+        }
+        return ResponseEntity.badRequest().body(Map.of("message", "Failed to update role"));
+    }
+
+    // --- Cache Management ---
+
+    @PostMapping("/cache/clear")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> clearAllCaches() {
+        return ResponseEntity.ok(adminService.clearCache(null));
+    }
+
+    @PostMapping("/cache/clear/{name}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> clearCache(@PathVariable String name) {
+        return ResponseEntity.ok(adminService.clearCache(name));
+    }
 }

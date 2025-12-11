@@ -158,4 +158,41 @@ public class AdminService {
         stats.put("estimatedStorageKB", 1204); // Placeholder
         return stats;
     }
+    // --- User Management ---
+
+    public List<Map<String, Object>> getAllUsers() {
+        return userRepository.findAll().stream().map(user -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", user.getId());
+            map.put("username", user.getUsername());
+            map.put("email", user.getUsername() + "@example.com"); // Placeholder
+            map.put("role", user.getRole().name());
+            map.put("sessionCount", sessionRepository.countByUserId(user.getId()));
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    public boolean updateUserRole(Long userId, String newRole) {
+        return userRepository.findById(userId).map(user -> {
+            try {
+                // Handle "STUDENT" as "USER" if needed, or assume exact match
+                String roleName = "STUDENT".equals(newRole) ? "USER" : newRole;
+                user.setRole(com.japanesestudy.app.entity.Role.valueOf(roleName));
+                userRepository.save(user);
+                return true;
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        }).orElse(false);
+    }
+
+    // --- Cache Management ---
+
+    public Map<String, String> clearCache(String cacheName) {
+        // Placeholder implementation
+        if (cacheName == null) {
+            return Map.of("message", "All caches cleared");
+        }
+        return Map.of("message", "Cache '" + cacheName + "' cleared");
+    }
 }
