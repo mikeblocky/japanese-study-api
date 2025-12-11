@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface StudySessionRepository extends JpaRepository<StudySession, Long> {
     List<StudySession> findByUserIdOrderByStartTimeDesc(Long userId);
+
+    long countByUserId(Long userId);
 }
