@@ -36,6 +36,11 @@ public class StudyController {
         return studyService.getDueItems(resolvedUserId);
     }
 
+    @GetMapping("/items")
+    public List<StudyItem> getAllItems() {
+        return studyService.getAllItems();
+    }
+
     @GetMapping("/items/topic/{topicId}")
     public List<StudyItem> getItemsByTopic(@PathVariable long topicId) {
         return studyService.getItemsByTopic(topicId);

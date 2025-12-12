@@ -48,6 +48,11 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
+    public List<StudyItem> getAllItems() {
+        return studyItemRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public List<StudyItem> getItemsByTopic(long topicId) {
         return studyItemRepository.findByTopicId(topicId);
     }
