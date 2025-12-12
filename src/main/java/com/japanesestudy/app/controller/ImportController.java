@@ -1,7 +1,6 @@
 package com.japanesestudy.app.controller;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.sql.Connection;
@@ -17,6 +16,7 @@ import java.util.zip.ZipInputStream;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,6 +35,24 @@ public class ImportController {
 
     public ImportController(AnkiImportService ankiImportService) {
         this.ankiImportService = ankiImportService;
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<?> checkHealth() {
+        return ResponseEntity.ok(Map.of(
+                "status", "healthy",
+                "message", "Import service is available",
+                "sqliteAvailable", checkSQLiteAvailable()
+        ));
+    }
+
+    private boolean checkSQLiteAvailable() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     @PostMapping("/anki")
