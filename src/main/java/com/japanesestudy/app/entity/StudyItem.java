@@ -55,6 +55,11 @@ public class StudyItem {
     @JsonIgnore
     private List<UserProgress> userProgress = new ArrayList<>();
 
+    // Cascade delete session logs when study item is deleted
+    @OneToMany(mappedBy = "studyItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<SessionLog> sessionLogs = new ArrayList<>();
+
     // Constructors
     public StudyItem() {
     }
@@ -136,6 +141,14 @@ public class StudyItem {
 
     public void setUserProgress(List<UserProgress> userProgress) {
         this.userProgress = userProgress;
+    }
+
+    public List<SessionLog> getSessionLogs() {
+        return sessionLogs;
+    }
+
+    public void setSessionLogs(List<SessionLog> sessionLogs) {
+        this.sessionLogs = sessionLogs;
     }
 
     @Override
