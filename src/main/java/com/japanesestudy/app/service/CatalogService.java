@@ -78,6 +78,52 @@ public class CatalogService {
         courseRepository.deleteById(courseId);
     }
 
+    // ===== Topic CRUD =====
+    @Transactional
+    @CacheEvict(cacheNames = {"topicsByCourse", "itemsByTopic"}, allEntries = true)
+    public Topic createTopic(Topic topic) {
+        return topicRepository.save(topic);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"topicsByCourse", "itemsByTopic"}, allEntries = true)
+    public Topic updateTopic(Topic topic) {
+        return topicRepository.save(topic);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"topicsByCourse", "itemsByTopic"}, allEntries = true)
+    public void deleteTopic(long topicId) {
+        topicRepository.deleteById(topicId);
+    }
+
+    public Optional<Topic> getTopicById(long topicId) {
+        return topicRepository.findById(topicId);
+    }
+
+    // ===== StudyItem CRUD =====
+    @Transactional
+    @CacheEvict(cacheNames = {"itemsByTopic"}, allEntries = true)
+    public StudyItem createStudyItem(StudyItem item) {
+        return studyItemRepository.save(item);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"itemsByTopic"}, allEntries = true)
+    public StudyItem updateStudyItem(StudyItem item) {
+        return studyItemRepository.save(item);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"itemsByTopic"}, allEntries = true)
+    public void deleteStudyItem(long itemId) {
+        studyItemRepository.deleteById(itemId);
+    }
+
+    public Optional<StudyItem> getStudyItemById(long itemId) {
+        return studyItemRepository.findById(itemId);
+    }
+
     @Transactional
     @CacheEvict(cacheNames = {"topicsByCourse"}, allEntries = true)
     public int reorderTopicsByTitle(long courseId) {

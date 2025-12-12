@@ -44,6 +44,18 @@ public class CourseController {
         return catalogService.getTopicsByCourse(id);
     }
 
+    @PostMapping("/{id}/topics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Topic> createTopicForCourse(@PathVariable long id, @RequestBody Topic topic) {
+        return catalogService.getCourseById(id)
+                .map(course -> {
+                    topic.setCourse(course);
+                    Topic created = catalogService.createTopic(topic);
+                    return ResponseEntity.ok(created);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Course> createCourse(@RequestBody Course course) {
