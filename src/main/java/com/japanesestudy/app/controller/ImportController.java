@@ -138,14 +138,29 @@ public class ImportController {
 
             try (Connection conn = DriverManager.getConnection(url); Statement stmt = conn.createStatement()) {
 
-                // Query to get cards with their notes - simplified without deck name join
+                // Debug: Print available tables
+                System.out.println("=== Anki Database Debug ===");
+                try (ResultSet tables = conn.getMetaData().getTables(null, null, "%", null)) {
+                    System.out.println("Available tables:");
+                    while (tables.next()) {
+                        System.out.println("  - " + tables.getString("TABLE_NAME"));
+                    }
+                }
+
+                // Check how many notes exist
+                try (ResultSet countRs = stmt.executeQuery("SELECT COUNT(*) as cnt FROM notes")) {
+                    if (countRs.next()) {
+                        System.out.println("Total notes in database: " + countRs.getInt("cnt"));
+                    }
+                }
+
+                // Query to get all notes directly (more reliable than joining cards)
                 String query = """
                     SELECT 
-                        n.flds as fields,
-                        c.id as card_id
-                    FROM cards c
-                    JOIN notes n ON c.nid = n.id
-                    WHERE c.type >= 0
+                        id,
+                        flds as fields,
+                        sfld as sort_field
+                    FROM notes
                     LIMIT 10000
                     """;
 
@@ -154,8 +169,22 @@ public class ImportController {
                     while (rs.next()) {
                         cardCount++;
                         String fields = rs.getString("fields");
+                        String sortField = rs.getString("sort_field");
+
+                        // Debug first few cards
+                        if (cardCount <= 5) {
+                            System.out.println("Card " + cardCount + " fields: "
+                                    + (fields != null ? fields.substring(0, Math.min(100, fields.length())) : "null"));
+                        }
 
                         if (fields == null || fields.trim().isEmpty()) {
+                            skippedItems++;
+                            continue;
+                        }
+
+                        // Skip the Anki version warning placeholder
+                        if (fields.contains("Please update to the latest Anki version")) {
+                            System.out.println("Skipping Anki version warning card");
                             skippedItems++;
                             continue;
                         }
