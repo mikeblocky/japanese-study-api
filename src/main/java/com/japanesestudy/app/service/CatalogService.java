@@ -3,9 +3,11 @@ package com.japanesestudy.app.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
@@ -56,5 +58,23 @@ public class CatalogService {
             return List.of();
         }
         return studyItemRepository.findByTopicId(topicId, PageRequest.of(0, limit)).getContent();
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
+    public Course createCourse(Course course) {
+        return courseRepository.save(course);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
+    public Course updateCourse(Course course) {
+        return courseRepository.save(course);
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
+    public void deleteCourse(long courseId) {
+        courseRepository.deleteById(courseId);
     }
 }
