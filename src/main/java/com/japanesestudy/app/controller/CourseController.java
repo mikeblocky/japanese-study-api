@@ -67,6 +67,7 @@ public class CourseController {
     }
 
     @PostMapping("/{id}/reorder-topics")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> reorderTopics(@PathVariable long id) {
         int count = catalogService.reorderTopicsByTitle(id);
         return ResponseEntity.ok(java.util.Map.of(
