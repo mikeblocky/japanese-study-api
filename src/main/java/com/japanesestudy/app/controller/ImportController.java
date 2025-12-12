@@ -101,26 +101,29 @@ public class ImportController {
                 System.out.println("  - " + f.getName() + " (" + f.length() + " bytes)");
             }
 
-            // Find collection database - try multiple possible names
-            collectionFile = new File(tempDir, "collection.anki2");
-            if (!collectionFile.exists()) {
-                collectionFile = new File(tempDir, "collection.anki21");
-            }
+            // Find collection database - PRIORITIZE collection.anki21 (newer format with actual data)
+            // collection.anki2 in newer exports is just a placeholder with the warning message
+            collectionFile = new File(tempDir, "collection.anki21");
             if (!collectionFile.exists()) {
                 collectionFile = new File(tempDir, "collection.anki21b");
+            }
+            if (!collectionFile.exists()) {
+                collectionFile = new File(tempDir, "collection.anki2");
             }
             // Some exports put it in a subfolder
             if (!collectionFile.exists()) {
                 File[] files = tempDir.listFiles();
                 if (files != null) {
                     for (File f : files) {
-                        if (f.getName().endsWith(".anki2") || f.getName().endsWith(".anki21") || f.getName().endsWith(".anki21b")) {
+                        if (f.getName().endsWith(".anki21") || f.getName().endsWith(".anki21b") || f.getName().endsWith(".anki2")) {
                             collectionFile = f;
                             break;
                         }
                     }
                 }
             }
+
+            System.out.println("Using database file: " + collectionFile.getName() + " (" + collectionFile.length() + " bytes)");
 
             if (!collectionFile.exists()) {
                 return ResponseEntity.badRequest()
