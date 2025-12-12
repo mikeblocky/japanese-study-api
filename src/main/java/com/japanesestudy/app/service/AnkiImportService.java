@@ -66,9 +66,16 @@ public class AnkiImportService {
             List<StudyItem> batch = new ArrayList<>(Math.min(entry.getValue().size(), batchSize));
             for (AnkiItem ankiItem : entry.getValue()) {
                 StudyItem studyItem = new StudyItem();
-                studyItem.setPrimaryText(ankiItem.getFront() != null ? ankiItem.getFront() : "");
-                studyItem.setSecondaryText(ankiItem.getReading() != null ? ankiItem.getReading() : "");
-                studyItem.setMeaning(ankiItem.getBack() != null ? ankiItem.getBack() : "");
+                String primaryText = ankiItem.getFront() != null && !ankiItem.getFront().trim().isEmpty()
+                        ? ankiItem.getFront() : "-";
+                String secondaryText = ankiItem.getReading() != null && !ankiItem.getReading().trim().isEmpty()
+                        ? ankiItem.getReading() : ankiItem.getFront(); // Fallback to front if no reading
+                String meaning = ankiItem.getBack() != null && !ankiItem.getBack().trim().isEmpty()
+                        ? ankiItem.getBack() : "-";
+
+                studyItem.setPrimaryText(primaryText);
+                studyItem.setSecondaryText(secondaryText);
+                studyItem.setMeaning(meaning);
                 studyItem.setTopic(topic);
                 studyItem.setType("VOCABULARY");
                 batch.add(studyItem);
