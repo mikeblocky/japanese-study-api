@@ -212,13 +212,13 @@ public class ImportController {
                         // Split fields by Anki's delimiter
                         String[] parts = fields.split("\\x1f");
 
-                        // Clean HTML and media tags from text
-                        String front = parts.length > 0 ? cleanText(parts[0], skipMedia) : "";
-                        String back = parts.length > 1 ? cleanText(parts[1], skipMedia) : "";
-                        String reading = parts.length > 2 ? cleanText(parts[2], skipMedia) : "";
+                        // For Kanji decks: parts[0]=Expression, parts[1]=Reading, parts[2]=Meaning
+                        String expression = parts.length > 0 ? cleanText(parts[0], skipMedia) : "";
+                        String reading = parts.length > 1 ? cleanText(parts[1], skipMedia) : "";
+                        String meaning = parts.length > 2 ? cleanText(parts[2], skipMedia) : "";
 
                         // Skip empty cards BEFORE checking for media
-                        if (front.trim().isEmpty() && back.trim().isEmpty()) {
+                        if (expression.trim().isEmpty() && meaning.trim().isEmpty()) {
                             skippedItems++;
                             continue;
                         }
@@ -229,23 +229,24 @@ public class ImportController {
                             boolean backHasMedia = containsMedia(parts.length > 1 ? parts[1] : "");
 
                             // Only skip if card has media AND no meaningful text content
-                            if ((frontHasMedia || backHasMedia) && front.trim().isEmpty() && back.trim().isEmpty()) {
+                            if ((frontHasMedia || backHasMedia) && expression.trim().isEmpty() && meaning.trim().isEmpty()) {
                                 skippedItems++;
                                 continue;
                             }
                         }
 
                         AnkiItem item = new AnkiItem();
-                        item.setFront(front.substring(0, Math.min(front.length(), 500)));
-                        item.setBack(back.substring(0, Math.min(back.length(), 1000)));
-                        item.setReading(reading.isEmpty() ? null : reading.substring(0, Math.min(reading.length(), 200)));
+                        // Map correctly: front=expression, reading=reading, back=meaning
+                        item.setFront(expression.substring(0, Math.min(expression.length(), 500)));
+                        item.setReading(reading.isEmpty() ? null : reading.substring(0, Math.min(reading.length(), 500)));
+                        item.setBack(meaning.substring(0, Math.min(meaning.length(), 1000)));
                         // Use items.size() (0-based) for lesson grouping so cards 0-19 = Lesson 01, 20-39 = Lesson 02, etc.
                         int lessonNum = (items.size() / 20) + 1;
                         item.setTopic(String.format("Lesson %02d", lessonNum)); // Zero-padded for proper sorting
                         items.add(item);
 
                         // Warn if text was truncated
-                        if (front.length() > 500 || back.length() > 1000) {
+                        if (expression.length() > 500 || meaning.length() > 1000) {
                             warnings.add("Some text was truncated to fit database limits");
                         }
                     }
