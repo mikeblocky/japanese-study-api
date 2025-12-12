@@ -33,7 +33,7 @@ services:
           name: japanese-study-db
           property: password
       - key: CORS_ORIGINS
-        value: "https://japanese-study-seven.vercel.app"
+        value: "http://localhost:5173,https://japanese-study-seven.vercel.app,https://*.vercel.app"
       - key: JWT_SECRET
         value: "prodJwtSecretKey2024JapaneseStudyAppSecureToken"
       - key: PORT

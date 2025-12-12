@@ -81,14 +81,16 @@ public class WebSecurityConfig {
                 .filter(s -> !s.isEmpty())
                 .toList();
 
-        boolean wildcard = origins.stream().anyMatch("*"::equals);
-        if (wildcard) {
-            // Credentials + wildcard origins are not allowed by the CORS spec.
-            configuration.setAllowedOriginPatterns(java.util.List.of("*"));
-            configuration.setAllowCredentials(false);
+        // We authenticate via Authorization header (JWT), not cookies, so we don't need credentials.
+        // Keeping credentials disabled also makes wildcard/pattern origins safe and avoids common CORS pitfalls.
+        configuration.setAllowCredentials(false);
+
+        // Support wildcard patterns like "https://*.vercel.app" (or "*").
+        boolean hasPattern = origins.stream().anyMatch(o -> o.contains("*"));
+        if (hasPattern) {
+            configuration.setAllowedOriginPatterns(origins);
         } else {
             configuration.setAllowedOrigins(origins);
-            configuration.setAllowCredentials(true);
         }
 
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
