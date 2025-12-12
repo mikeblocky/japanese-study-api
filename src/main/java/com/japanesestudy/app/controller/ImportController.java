@@ -74,17 +74,13 @@ public class ImportController {
             // Create temporary directory
             tempDir = Files.createTempDirectory("anki-import").toFile();
 
-            // Extract .apkg (which is a zip file)
+            // Extract .apkg (which is a zip file) - extract ALL files to see what's inside
+            System.out.println("=== Extracting .apkg file ===");
             try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
+                    System.out.println("Found entry: " + entry.getName());
                     File extractedFile = new File(tempDir, entry.getName());
-
-                    // Skip media files if textOnly is true
-                    if (textOnly && !entry.getName().equals("collection.anki2")
-                            && !entry.getName().equals("collection.anki21")) {
-                        continue;
-                    }
 
                     if (!entry.isDirectory()) {
                         extractedFile.getParentFile().mkdirs();
@@ -99,10 +95,31 @@ public class ImportController {
                 }
             }
 
-            // Find collection.anki2 or collection.anki21
+            // List all files in temp directory
+            System.out.println("Files extracted to temp dir:");
+            for (File f : tempDir.listFiles()) {
+                System.out.println("  - " + f.getName() + " (" + f.length() + " bytes)");
+            }
+
+            // Find collection database - try multiple possible names
             collectionFile = new File(tempDir, "collection.anki2");
             if (!collectionFile.exists()) {
                 collectionFile = new File(tempDir, "collection.anki21");
+            }
+            if (!collectionFile.exists()) {
+                collectionFile = new File(tempDir, "collection.anki21b");
+            }
+            // Some exports put it in a subfolder
+            if (!collectionFile.exists()) {
+                File[] files = tempDir.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        if (f.getName().endsWith(".anki2") || f.getName().endsWith(".anki21") || f.getName().endsWith(".anki21b")) {
+                            collectionFile = f;
+                            break;
+                        }
+                    }
+                }
             }
 
             if (!collectionFile.exists()) {
