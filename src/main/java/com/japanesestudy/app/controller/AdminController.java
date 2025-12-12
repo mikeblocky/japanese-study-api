@@ -1,26 +1,37 @@
 package com.japanesestudy.app.controller;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.japanesestudy.app.dto.AnkiImportRequest;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.service.AdminService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
 
-    @Autowired
-    private AdminService adminService;
+    private final AdminService adminService;
+
+    public AdminController(AdminService adminService) {
+        this.adminService = adminService;
+    }
 
     // --- Course Management ---
-
     @GetMapping("/courses")
     @PreAuthorize("hasRole('ADMIN')")
     public List<Map<String, Object>> getAdminCourses() {
@@ -29,13 +40,13 @@ public class AdminController {
 
     @PostMapping("/courses")
     @PreAuthorize("hasRole('ADMIN')")
-    public Course createCourse(@RequestBody Course course) {
+    public Course createCourse(@Valid @NonNull @RequestBody Course course) {
         return adminService.createCourse(course);
     }
 
     @PatchMapping("/courses/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Course> updateCourse(@PathVariable Long id, @RequestBody Course updates) {
+    public ResponseEntity<Course> updateCourse(@PathVariable long id, @Valid @NonNull @RequestBody Course updates) {
         return adminService.updateCourse(id, updates)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -43,7 +54,7 @@ public class AdminController {
 
     @DeleteMapping("/courses/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteCourse(@PathVariable Long id) {
+    public ResponseEntity<?> deleteCourse(@PathVariable long id) {
         if (adminService.deleteCourse(id)) {
             return ResponseEntity.ok(Map.of("message", "Course deleted"));
         }
@@ -51,10 +62,9 @@ public class AdminController {
     }
 
     // --- Anki Import ---
-
     @PostMapping("/anki/import")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> importAnki(@Valid @RequestBody AnkiImportRequest request) {
+    public ResponseEntity<?> importAnki(@Valid @NonNull @RequestBody AnkiImportRequest request) {
         try {
             Map<String, Object> result = adminService.importAnki(request);
             return ResponseEntity.ok(result);
@@ -64,7 +74,6 @@ public class AdminController {
     }
 
     // --- Statistics ---
-
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getStats() {
@@ -92,7 +101,7 @@ public class AdminController {
 
     @PatchMapping("/users/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> updateUserRole(@PathVariable long id, @NonNull @RequestBody Map<String, String> body) {
         String role = body.get("role");
         if (adminService.updateUserRole(id, role)) {
             return ResponseEntity.ok(Map.of("message", "Role updated"));
@@ -101,7 +110,6 @@ public class AdminController {
     }
 
     // --- Cache Management ---
-
     @PostMapping("/cache/clear")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> clearAllCaches() {

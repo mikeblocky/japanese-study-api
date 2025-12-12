@@ -5,7 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface StudySessionRepository extends JpaRepository<StudySession, Long> {
-    List<StudySession> findByUserIdOrderByStartTimeDesc(Long userId);
 
-    long countByUserId(Long userId);
+    List<StudySession> findByUserIdOrderByStartTimeDesc(long userId);
+
+    long countByUserId(long userId);
 }

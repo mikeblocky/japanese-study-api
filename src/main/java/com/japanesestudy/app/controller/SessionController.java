@@ -1,43 +1,40 @@
 package com.japanesestudy.app.controller;
 
+import java.util.List;
+
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.japanesestudy.app.entity.Mastery;
 import com.japanesestudy.app.entity.UserProgress;
 import com.japanesestudy.app.repository.MasteryRepository;
 import com.japanesestudy.app.repository.UserProgressRepository;
-import com.japanesestudy.app.repository.StudySessionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.security.access.prepost.PreAuthorize;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sessions")
 public class SessionController {
 
-    @Autowired
-    MasteryRepository masteryRepository;
+    private final MasteryRepository masteryRepository;
 
-    @Autowired(required = false)
-    UserProgressRepository userProgressRepository;
+    private final UserProgressRepository userProgressRepository;
 
-    @Autowired(required = false)
-    StudySessionRepository studySessionRepository;
+    public SessionController(MasteryRepository masteryRepository, UserProgressRepository userProgressRepository) {
+        this.masteryRepository = masteryRepository;
+        this.userProgressRepository = userProgressRepository;
+    }
 
     @GetMapping("/mastery")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public List<Mastery> getMastery(@RequestParam Long userId) {
+    public List<Mastery> getMastery(@RequestParam long userId) {
         return masteryRepository.findByUserId(userId);
     }
 
     @GetMapping("/due")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public List<UserProgress> getDueItems(@RequestParam Long userId) {
-        if (userProgressRepository != null) {
-            return userProgressRepository.findDueItems(userId, java.time.LocalDateTime.now());
-        }
-        return List.of();
+    public List<UserProgress> getDueItems(@RequestParam long userId) {
+        return userProgressRepository.findDueItems(userId, java.time.LocalDateTime.now());
     }
 }

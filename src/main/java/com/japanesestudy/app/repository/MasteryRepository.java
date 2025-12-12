@@ -6,9 +6,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface MasteryRepository extends JpaRepository<Mastery, Long> {
-    java.util.List<Mastery> findAllByUserIdAndNextReviewAtLessThanEqual(Long userId, java.time.LocalDateTime date);
 
-    java.util.Optional<Mastery> findByUserIdAndItemId(Long userId, Long itemId);
+    java.util.List<Mastery> findAllByUserIdAndNextReviewAtLessThanEqual(long userId, java.time.LocalDateTime date);
 
-    java.util.List<Mastery> findByUserId(Long userId);
+    java.util.Optional<Mastery> findByUserIdAndItemId(long userId, long itemId);
+
+    java.util.List<Mastery> findByUserId(long userId);
 }

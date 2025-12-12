@@ -1,5 +1,21 @@
 package com.japanesestudy.app.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.japanesestudy.app.dto.AdminCourseSummary;
 import com.japanesestudy.app.dto.AnkiImportRequest;
 import com.japanesestudy.app.dto.AnkiItem;
 import com.japanesestudy.app.entity.Course;
@@ -10,67 +26,73 @@ import com.japanesestudy.app.repository.StudyItemRepository;
 import com.japanesestudy.app.repository.StudySessionRepository;
 import com.japanesestudy.app.repository.TopicRepository;
 import com.japanesestudy.app.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class AdminService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final CourseRepository courseRepository;
+    private final TopicRepository topicRepository;
+    private final StudyItemRepository studyItemRepository;
+    private final StudySessionRepository sessionRepository;
+    private final CacheManager cacheManager;
 
-    @Autowired
-    private CourseRepository courseRepository;
-
-    @Autowired
-    private TopicRepository topicRepository;
-
-    @Autowired
-    private StudyItemRepository studyItemRepository;
-
-    @Autowired
-    private StudySessionRepository sessionRepository;
+    public AdminService(
+            UserRepository userRepository,
+            CourseRepository courseRepository,
+            TopicRepository topicRepository,
+            StudyItemRepository studyItemRepository,
+            StudySessionRepository sessionRepository,
+            CacheManager cacheManager) {
+        this.userRepository = userRepository;
+        this.courseRepository = courseRepository;
+        this.topicRepository = topicRepository;
+        this.studyItemRepository = studyItemRepository;
+        this.sessionRepository = sessionRepository;
+        this.cacheManager = cacheManager;
+    }
 
     // --- Course Management ---
-
+    @Cacheable(cacheNames = "adminCourseSummaries")
     public List<Map<String, Object>> getAdminCourses() {
-        return courseRepository.findAll().stream().map(course -> {
+        List<AdminCourseSummary> summaries = courseRepository.findAdminCourseSummaries();
+        return summaries.stream().map(summary -> {
             Map<String, Object> map = new HashMap<>();
-            map.put("id", course.getId());
-            map.put("title", course.getTitle());
-            map.put("description", course.getDescription());
-            map.put("level", course.getLevel());
-            map.put("topicCount", course.getTopics() != null ? course.getTopics().size() : 0);
-            int itemCount = course.getTopics() != null
-                    ? course.getTopics().stream()
-                            .mapToInt(t -> t.getStudyItems() != null ? t.getStudyItems().size() : 0).sum()
-                    : 0;
-            map.put("itemCount", itemCount);
+            map.put("id", summary.getId());
+            map.put("title", summary.getTitle());
+            map.put("description", summary.getDescription());
+            map.put("level", summary.getLevel());
+            map.put("topicCount", summary.getTopicCount());
+            map.put("itemCount", summary.getItemCount());
             return map;
         }).collect(Collectors.toList());
     }
 
+    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic", "adminCourseSummaries"}, allEntries = true)
+    @SuppressWarnings("null")
     public Course createCourse(Course course) {
         return courseRepository.save(course);
     }
 
-    public Optional<Course> updateCourse(Long id, Course updates) {
+    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic", "adminCourseSummaries"}, allEntries = true)
+    @SuppressWarnings("null")
+    public Optional<Course> updateCourse(long id, Course updates) {
         return courseRepository.findById(id).map(course -> {
-            if (updates.getTitle() != null)
+            if (updates.getTitle() != null) {
                 course.setTitle(updates.getTitle());
-            if (updates.getDescription() != null)
+            }
+            if (updates.getDescription() != null) {
                 course.setDescription(updates.getDescription());
-            if (updates.getLevel() != null)
+            }
+            if (updates.getLevel() != null) {
                 course.setLevel(updates.getLevel());
+            }
             return courseRepository.save(course);
         });
     }
 
-    public boolean deleteCourse(Long id) {
+    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic", "adminCourseSummaries"}, allEntries = true)
+    public boolean deleteCourse(long id) {
         if (!courseRepository.existsById(id)) {
             return false;
         }
@@ -79,8 +101,8 @@ public class AdminService {
     }
 
     // --- Anki Import ---
-
     @Transactional
+    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic", "adminCourseSummaries", "adminStats"}, allEntries = true)
     public Map<String, Object> importAnki(AnkiImportRequest request) {
         // Create course
         Course course = new Course();
@@ -98,6 +120,7 @@ public class AdminService {
 
         // Create topics and study items
         int topicOrder = 0;
+        int itemsCreated = 0;
         for (Map.Entry<String, List<AnkiItem>> entry : itemsByTopic.entrySet()) {
             Topic topic = new Topic();
             topic.setTitle(entry.getKey());
@@ -105,6 +128,8 @@ public class AdminService {
             topic.setOrderIndex(topicOrder++);
             topic = topicRepository.save(topic);
 
+            // Batch insert items for this topic
+            List<StudyItem> batch = new ArrayList<>(Math.min(entry.getValue().size(), 500));
             for (AnkiItem ankiItem : entry.getValue()) {
                 StudyItem studyItem = new StudyItem();
                 studyItem.setPrimaryText(ankiItem.getFront() != null ? ankiItem.getFront() : "");
@@ -112,7 +137,20 @@ public class AdminService {
                 studyItem.setMeaning(ankiItem.getBack() != null ? ankiItem.getBack() : "");
                 studyItem.setTopic(topic);
                 studyItem.setType("VOCABULARY");
-                studyItemRepository.save(studyItem);
+                batch.add(studyItem);
+
+                if (batch.size() >= 500) {
+                    studyItemRepository.saveAll(batch);
+                    studyItemRepository.flush();
+                    itemsCreated += batch.size();
+                    batch.clear();
+                }
+            }
+
+            if (!batch.isEmpty()) {
+                studyItemRepository.saveAll(batch);
+                studyItemRepository.flush();
+                itemsCreated += batch.size();
             }
         }
 
@@ -121,11 +159,11 @@ public class AdminService {
                 "courseId", course.getId(),
                 "courseName", course.getTitle(),
                 "topicsCreated", itemsByTopic.size(),
-                "itemsCreated", request.getItems().size());
+                "itemsCreated", itemsCreated);
     }
 
     // --- Statistics ---
-
+    @Cacheable(cacheNames = "adminStats")
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", userRepository.count());
@@ -172,7 +210,10 @@ public class AdminService {
         }).collect(Collectors.toList());
     }
 
-    public boolean updateUserRole(Long userId, String newRole) {
+    public boolean updateUserRole(long userId, String newRole) {
+        if (newRole == null || newRole.isBlank()) {
+            return false;
+        }
         return userRepository.findById(userId).map(user -> {
             try {
                 // Handle "STUDENT" as "USER" if needed, or assume exact match
@@ -187,12 +228,31 @@ public class AdminService {
     }
 
     // --- Cache Management ---
-
+    @SuppressWarnings("null")
     public Map<String, String> clearCache(String cacheName) {
-        // Placeholder implementation
-        if (cacheName == null) {
+        if (cacheName == null || cacheName.isBlank()) {
+            String[] cacheNames = {
+                "courses",
+                "courseById",
+                "topicsByCourse",
+                "itemsByTopic",
+                "adminCourseSummaries",
+                "adminStats"
+            };
+            for (String name : cacheNames) {
+                Cache cache = cacheManager.getCache(name);
+                if (cache != null) {
+                    cache.clear();
+                }
+            }
             return Map.of("message", "All caches cleared");
         }
+
+        Cache cache = cacheManager.getCache(cacheName);
+        if (cache == null) {
+            return Map.of("message", "Cache not found: " + cacheName);
+        }
+        cache.clear();
         return Map.of("message", "Cache '" + cacheName + "' cleared");
     }
 }

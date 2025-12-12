@@ -3,13 +3,14 @@ package com.japanesestudy.app.dto;
 import java.util.List;
 
 public class JwtResponse {
+
     private String token;
     private String type = "Bearer";
-    private Long id;
+    private long id;
     private String username;
-    private List<String> roles;
+    private final List<String> roles;
 
-    public JwtResponse(String accessToken, Long id, String username, List<String> roles) {
+    public JwtResponse(String accessToken, long id, String username, List<String> roles) {
         this.token = accessToken;
         this.id = id;
         this.username = username;
@@ -32,11 +33,11 @@ public class JwtResponse {
         this.type = tokenType;
     }
 
-    public Long getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
     }
 

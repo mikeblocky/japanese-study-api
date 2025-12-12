@@ -1,57 +1,73 @@
 package com.japanesestudy.app.service;
 
-import com.japanesestudy.app.entity.*;
-import com.japanesestudy.app.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import com.japanesestudy.app.entity.SessionLog;
+import com.japanesestudy.app.entity.StudyItem;
+import com.japanesestudy.app.entity.StudySession;
+import com.japanesestudy.app.entity.User;
+import com.japanesestudy.app.entity.UserProgress;
+import com.japanesestudy.app.repository.SessionLogRepository;
+import com.japanesestudy.app.repository.StudyItemRepository;
+import com.japanesestudy.app.repository.StudySessionRepository;
+import com.japanesestudy.app.repository.UserProgressRepository;
+import com.japanesestudy.app.repository.UserRepository;
 
 @Service
 public class StudyService {
 
-    @Autowired
-    private UserProgressRepository userProgressRepository;
+    private final UserProgressRepository userProgressRepository;
+    private final StudyItemRepository studyItemRepository;
+    private final StudySessionRepository sessionRepository;
+    private final SessionLogRepository sessionLogRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private StudyItemRepository studyItemRepository;
+    public StudyService(
+            UserProgressRepository userProgressRepository,
+            StudyItemRepository studyItemRepository,
+            StudySessionRepository sessionRepository,
+            SessionLogRepository sessionLogRepository,
+            UserRepository userRepository) {
+        this.userProgressRepository = userProgressRepository;
+        this.studyItemRepository = studyItemRepository;
+        this.sessionRepository = sessionRepository;
+        this.sessionLogRepository = sessionLogRepository;
+        this.userRepository = userRepository;
+    }
 
-    @Autowired
-    private StudySessionRepository sessionRepository;
-
-    @Autowired
-    private SessionLogRepository sessionLogRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    public List<UserProgress> getDueItems(Long userId) {
+    @Transactional(readOnly = true)
+    public List<UserProgress> getDueItems(long userId) {
         return userProgressRepository.findDueItems(userId, LocalDateTime.now());
     }
 
-    public List<StudyItem> getItemsByTopic(Long topicId) {
+    @Transactional(readOnly = true)
+    public List<StudyItem> getItemsByTopic(long topicId) {
         return studyItemRepository.findByTopicId(topicId);
     }
 
     @Transactional
-    public StudySession startSession(Long userId) {
+    public StudySession startSession(long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         StudySession session = new StudySession(user);
         return sessionRepository.save(session);
     }
 
     @Transactional
-    public void submitAnswer(Long sessionId, Long itemId, boolean correct) {
+    public void submitAnswer(long sessionId, long itemId, boolean correct) {
         StudySession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> new NoSuchElementException("Session not found"));
 
         StudyItem item = studyItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Item not found"));
+                .orElseThrow(() -> new NoSuchElementException("Item not found"));
 
         // Log the answer
         SessionLog log = new SessionLog(session, item, correct);
@@ -62,8 +78,9 @@ public class StudyService {
     }
 
     private void updateProgress(User user, StudyItem item, boolean correct) {
-        Optional<UserProgress> progressOpt = userProgressRepository.findByUserIdAndStudyItemId(user.getId(),
-                item.getId());
+        long userId = Objects.requireNonNull(user.getId(), "user.id must not be null");
+        long studyItemId = Objects.requireNonNull(item.getId(), "item.id must not be null");
+        Optional<UserProgress> progressOpt = userProgressRepository.findByUserIdAndStudyItemId(userId, studyItemId);
         UserProgress progress = progressOpt.orElse(new UserProgress(user, item));
 
         if (correct) {
@@ -73,12 +90,17 @@ public class StudyService {
             // Simple logic: interval = 1, 3, 7, 14, 30... (approx)
             // Or just multiply existing interval
             int interval = progress.getIntervalDays();
-            if (interval == 0)
-                interval = 1;
-            else if (interval == 1)
-                interval = 3;
-            else
-                interval = (int) (interval * progress.getEaseFactor());
+            switch (interval) {
+                case 0:
+                    interval = 1;
+                    break;
+                case 1:
+                    interval = 3;
+                    break;
+                default:
+                    interval = (int) (interval * progress.getEaseFactor());
+                    break;
+            }
 
             progress.setIntervalDays(interval);
             progress.setNextReview(LocalDateTime.now().plusDays(interval));
@@ -95,9 +117,9 @@ public class StudyService {
     }
 
     @Transactional
-    public StudySession endSession(Long sessionId) {
+    public StudySession endSession(long sessionId) {
         StudySession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> new NoSuchElementException("Session not found"));
 
         session.setEndTime(LocalDateTime.now());
         long duration = java.time.Duration.between(session.getStartTime(), session.getEndTime()).getSeconds();

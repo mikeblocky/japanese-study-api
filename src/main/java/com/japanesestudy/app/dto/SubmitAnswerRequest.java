@@ -1,14 +1,18 @@
 package com.japanesestudy.app.dto;
 
+import jakarta.validation.constraints.Min;
+
 public class SubmitAnswerRequest {
-    private Long itemId;
+
+    @Min(1)
+    private long itemId;
     private boolean correct;
 
-    public Long getItemId() {
+    public long getItemId() {
         return itemId;
     }
 
-    public void setItemId(Long itemId) {
+    public void setItemId(long itemId) {
         this.itemId = itemId;
     }
 

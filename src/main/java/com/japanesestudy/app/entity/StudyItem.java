@@ -1,11 +1,26 @@
 package com.japanesestudy.app.entity;
 
-import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+
 @Entity
-@Table(name = "study_items")
+@Table(name = "study_items", indexes = {
+    @Index(name = "idx_study_items_topic_id", columnList = "topic_id"),
+    @Index(name = "idx_study_items_type", columnList = "type")
+})
 public class StudyItem {
 
     @Id
@@ -13,9 +28,11 @@ public class StudyItem {
     private Long id;
 
     @Column(nullable = false)
+    @NotBlank(message = "primaryText is required")
     private String primaryText;
 
     @Column(nullable = false)
+    @NotBlank(message = "secondaryText is required")
     private String secondaryText;
 
     private String meaning;
@@ -106,10 +123,12 @@ public class StudyItem {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null || getClass() != o.getClass())
+        }
+        if (o == null || getClass() != o.getClass()) {
             return false;
+        }
         StudyItem item = (StudyItem) o;
         return Objects.equals(id, item.id);
     }

@@ -1,9 +1,20 @@
 package com.japanesestudy.app.entity;
 
-import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "courses")
@@ -14,6 +25,7 @@ public class Course {
     private Long id;
 
     @Column(nullable = false)
+    @NotBlank(message = "Course title is required")
     private String title;
 
     @Column(length = 1000)
@@ -22,6 +34,7 @@ public class Course {
     private String level; // e.g., N5, N4
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Topic> topics = new ArrayList<>();
 
     // Constructors
@@ -77,10 +90,12 @@ public class Course {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null || getClass() != o.getClass())
+        }
+        if (o == null || getClass() != o.getClass()) {
             return false;
+        }
         Course course = (Course) o;
         return Objects.equals(id, course.id);
     }

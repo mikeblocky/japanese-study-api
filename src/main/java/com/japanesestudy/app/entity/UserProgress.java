@@ -1,11 +1,29 @@
 package com.japanesestudy.app.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+
 @Entity
-@Table(name = "user_progress", uniqueConstraints = { @UniqueConstraint(columnNames = { "user_id", "study_item_id" }) })
+@Table(name = "user_progress",
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"user_id", "study_item_id"})},
+        indexes = {
+            @Index(name = "idx_user_progress_user_id", columnList = "user_id"),
+            @Index(name = "idx_user_progress_next_review", columnList = "next_review"),
+            @Index(name = "idx_user_progress_user_next_review", columnList = "user_id, next_review"),
+            @Index(name = "idx_user_progress_study_item_id", columnList = "study_item_id")
+        })
 public class UserProgress {
 
     @Id
@@ -109,10 +127,12 @@ public class UserProgress {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o)
+        if (this == o) {
             return true;
-        if (o == null || getClass() != o.getClass())
+        }
+        if (o == null || getClass() != o.getClass()) {
             return false;
+        }
         UserProgress that = (UserProgress) o;
         return Objects.equals(id, that.id);
     }

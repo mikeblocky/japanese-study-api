@@ -10,7 +10,6 @@ import com.japanesestudy.app.repository.UserRepository;
 import com.japanesestudy.app.security.JwtUtils;
 import com.japanesestudy.app.security.service.UserDetailsImpl;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,54 +24,59 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-        @Autowired
-        AuthenticationManager authenticationManager;
 
-        @Autowired
-        UserRepository userRepository;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder encoder;
+    private final JwtUtils jwtUtils;
 
-        @Autowired
-        PasswordEncoder encoder;
+    public AuthController(
+            AuthenticationManager authenticationManager,
+            UserRepository userRepository,
+            PasswordEncoder encoder,
+            JwtUtils jwtUtils) {
+        this.authenticationManager = authenticationManager;
+        this.userRepository = userRepository;
+        this.encoder = encoder;
+        this.jwtUtils = jwtUtils;
+    }
 
-        @Autowired
-        JwtUtils jwtUtils;
+    @PostMapping("/login")
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
-        @PostMapping("/login")
-        public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
+                        loginRequest.getPassword()));
 
-                Authentication authentication = authenticationManager.authenticate(
-                                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
-                                                loginRequest.getPassword()));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateJwtToken(authentication);
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                String jwt = jwtUtils.generateJwtToken(authentication);
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(item -> item.getAuthority())
+                .collect(Collectors.toList());
 
-                UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-                List<String> roles = userDetails.getAuthorities().stream()
-                                .map(item -> item.getAuthority())
-                                .collect(Collectors.toList());
+        return ResponseEntity.ok(new JwtResponse(jwt,
+                userDetails.getId(),
+                userDetails.getUsername(),
+                roles));
+    }
 
-                return ResponseEntity.ok(new JwtResponse(jwt,
-                                userDetails.getId(),
-                                userDetails.getUsername(),
-                                roles));
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest signUpRequest) {
+        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Username is already taken!"));
         }
 
-        @PostMapping("/register")
-        public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest signUpRequest) {
-                if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-                        return ResponseEntity
-                                        .badRequest()
-                                        .body(new MessageResponse("Error: Username is already taken!"));
-                }
+        // Create new user's account
+        User user = new User(signUpRequest.getUsername(),
+                encoder.encode(signUpRequest.getPassword()),
+                Role.USER);
 
-                // Create new user's account
-                User user = new User(signUpRequest.getUsername(),
-                                encoder.encode(signUpRequest.getPassword()),
-                                Role.USER);
+        userRepository.save(user);
 
-                userRepository.save(user);
-
-                return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
-        }
+        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+    }
 }

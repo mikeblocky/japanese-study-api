@@ -8,10 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserProgressRepository extends JpaRepository<UserProgress, Long> {
-    Optional<UserProgress> findByUserIdAndStudyItemId(Long userId, Long studyItemId);
 
-    List<UserProgress> findByUserId(Long userId);
+    Optional<UserProgress> findByUserIdAndStudyItemId(long userId, long studyItemId);
+
+    List<UserProgress> findByUserId(long userId);
 
     @Query("SELECT up FROM UserProgress up WHERE up.user.id = :userId AND up.nextReview <= :now")
-    List<UserProgress> findDueItems(Long userId, LocalDateTime now);
+    List<UserProgress> findDueItems(long userId, LocalDateTime now);
 }

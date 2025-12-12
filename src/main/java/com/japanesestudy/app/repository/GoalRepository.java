@@ -7,7 +7,8 @@ import java.util.List;
 
 @Repository
 public interface GoalRepository extends JpaRepository<Goal, Long> {
-    List<Goal> findByUserId(Long userId);
 
-    List<Goal> findByUserIdAndIsCompletedFalse(Long userId);
+    List<Goal> findByUserId(long userId);
+
+    List<Goal> findByUserIdAndIsCompletedFalse(long userId);
 }
