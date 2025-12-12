@@ -4,10 +4,12 @@ import com.japanesestudy.app.entity.Role;
 import com.japanesestudy.app.entity.User;
 import com.japanesestudy.app.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "app.seed", name = "enabled", havingValue = "true")
 public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;

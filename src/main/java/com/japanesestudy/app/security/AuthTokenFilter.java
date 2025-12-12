@@ -39,10 +39,14 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
-            log.info("Request URI: {}, JWT present: {}", request.getRequestURI(), (jwt != null));
+            if (log.isDebugEnabled()) {
+                log.debug("Request URI: {}, JWT present: {}", request.getRequestURI(), (jwt != null));
+            }
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
-                log.info("JWT validated for user: {}", username);
+                if (log.isDebugEnabled()) {
+                    log.debug("JWT validated for user: {}", username);
+                }
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -52,7 +56,9 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.info("Authentication set in SecurityContext for: {}", username);
+                if (log.isDebugEnabled()) {
+                    log.debug("Authentication set in SecurityContext for: {}", username);
+                }
             } else if (jwt != null) {
                 log.warn("JWT token validation FAILED for URI: {}", request.getRequestURI());
             }

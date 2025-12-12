@@ -22,9 +22,7 @@ public class CacheConfig {
                 "courses",
                 "courseById",
                 "topicsByCourse",
-                "itemsByTopic",
-                "adminCourseSummaries",
-                "adminStats");
+                "itemsByTopic");
 
         cacheManager.setCacheSpecification(
                 "maximumSize=10000,expireAfterWrite=" + Duration.ofMinutes(10).toSeconds() + "s,recordStats");
