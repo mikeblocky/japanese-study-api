@@ -239,7 +239,9 @@ public class ImportController {
                         item.setFront(front.substring(0, Math.min(front.length(), 500)));
                         item.setBack(back.substring(0, Math.min(back.length(), 1000)));
                         item.setReading(reading.isEmpty() ? null : reading.substring(0, Math.min(reading.length(), 200)));
-                        item.setTopic("Lesson " + ((cardCount / 50) + 1)); // Group into lessons of ~50 cards
+                        // Use items.size() (0-based) for lesson grouping so cards 0-19 = Lesson 01, 20-39 = Lesson 02, etc.
+                        int lessonNum = (items.size() / 20) + 1;
+                        item.setTopic(String.format("Lesson %02d", lessonNum)); // Zero-padded for proper sorting
                         items.add(item);
 
                         // Warn if text was truncated
