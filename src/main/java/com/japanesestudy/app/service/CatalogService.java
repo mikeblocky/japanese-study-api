@@ -77,4 +77,39 @@ public class CatalogService {
     public void deleteCourse(long courseId) {
         courseRepository.deleteById(courseId);
     }
+
+    @Transactional
+    @CacheEvict(cacheNames = {"topicsByCourse"}, allEntries = true)
+    public int reorderTopicsByTitle(long courseId) {
+        List<Topic> topics = topicRepository.findByCourseIdOrderByOrderIndexAsc(courseId);
+
+        // Sort by extracting number from title (e.g., "Lesson 01" -> 1)
+        topics.sort((a, b) -> {
+            int numA = extractNumber(a.getTitle());
+            int numB = extractNumber(b.getTitle());
+            if (numA != numB) {
+                return numA - numB;
+            }
+            return a.getTitle().compareToIgnoreCase(b.getTitle());
+        });
+
+        // Update orderIndex
+        for (int i = 0; i < topics.size(); i++) {
+            topics.get(i).setOrderIndex(i);
+        }
+
+        topicRepository.saveAll(topics);
+        return topics.size();
+    }
+
+    private int extractNumber(String title) {
+        if (title == null) {
+            return Integer.MAX_VALUE;
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(title);
+        if (m.find()) {
+            return Integer.parseInt(m.group());
+        }
+        return Integer.MAX_VALUE;
+    }
 }

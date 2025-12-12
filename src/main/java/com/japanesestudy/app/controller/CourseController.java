@@ -3,7 +3,6 @@ package com.japanesestudy.app.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,5 +64,15 @@ public class CourseController {
     public ResponseEntity<Void> deleteCourse(@PathVariable long id) {
         catalogService.deleteCourse(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/reorder-topics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> reorderTopics(@PathVariable long id) {
+        int count = catalogService.reorderTopicsByTitle(id);
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Topics reordered successfully",
+                "topicsReordered", count
+        ));
     }
 }
