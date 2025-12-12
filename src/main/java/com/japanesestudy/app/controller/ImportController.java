@@ -138,37 +138,22 @@ public class ImportController {
 
             try (Connection conn = DriverManager.getConnection(url); Statement stmt = conn.createStatement()) {
 
-                // Get deck name - handle both old and new Anki formats
-                String deckName = "Imported Deck";
-                try (ResultSet deckRs = stmt.executeQuery(
-                        "SELECT name FROM decks LIMIT 1")) {
-                    if (deckRs.next()) {
-                        String name = deckRs.getString("name");
-                        if (name != null && !name.trim().isEmpty()) {
-                            deckName = name;
-                        }
-                    }
-                } catch (Exception e) {
-                    System.out.println("Could not read deck name, using default: " + e.getMessage());
-                }
-
-                // Query to get cards with their notes
+                // Query to get cards with their notes - simplified without deck name join
                 String query = """
                     SELECT 
                         n.flds as fields,
-                        c.id as card_id,
-                        d.name as deck_name
+                        c.id as card_id
                     FROM cards c
                     JOIN notes n ON c.nid = n.id
-                    LEFT JOIN decks d ON c.did = d.id
                     WHERE c.type >= 0
                     LIMIT 10000
                     """;
 
                 try (ResultSet rs = stmt.executeQuery(query)) {
+                    int cardCount = 0;
                     while (rs.next()) {
+                        cardCount++;
                         String fields = rs.getString("fields");
-                        String topic = rs.getString("deck_name");
 
                         if (fields == null || fields.trim().isEmpty()) {
                             skippedItems++;
@@ -199,7 +184,7 @@ public class ImportController {
                         item.setFront(front.substring(0, Math.min(front.length(), 500)));
                         item.setBack(back.substring(0, Math.min(back.length(), 1000)));
                         item.setReading(reading.isEmpty() ? null : reading.substring(0, Math.min(reading.length(), 200)));
-                        item.setTopic(topic != null && !topic.isEmpty() ? topic : "Default");
+                        item.setTopic("Lesson " + ((cardCount / 50) + 1)); // Group into lessons of ~50 cards
                         items.add(item);
 
                         // Warn if text was truncated
