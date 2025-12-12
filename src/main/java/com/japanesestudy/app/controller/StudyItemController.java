@@ -35,9 +35,12 @@ public class StudyItemController {
     public ResponseEntity<StudyItem> updateItem(@PathVariable long id, @RequestBody StudyItem item) {
         return catalogService.getStudyItemById(id)
                 .map(existing -> {
-                    item.setId(id);
-                    item.setTopic(existing.getTopic());
-                    return ResponseEntity.ok(catalogService.updateStudyItem(item));
+                    // Only update the fields that should change, preserve relationships
+                    existing.setPrimaryText(item.getPrimaryText());
+                    existing.setSecondaryText(item.getSecondaryText());
+                    existing.setMeaning(item.getMeaning());
+                    // Topic is preserved since we're updating the existing entity
+                    return ResponseEntity.ok(catalogService.updateStudyItem(existing));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

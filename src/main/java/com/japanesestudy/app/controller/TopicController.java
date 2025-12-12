@@ -60,9 +60,14 @@ public class TopicController {
     public ResponseEntity<Topic> updateTopic(@PathVariable long id, @RequestBody Topic topic) {
         return catalogService.getTopicById(id)
                 .map(existing -> {
-                    topic.setId(id);
-                    topic.setCourse(existing.getCourse());
-                    return ResponseEntity.ok(catalogService.updateTopic(topic));
+                    // Only update the fields that should change, preserve relationships
+                    existing.setTitle(topic.getTitle());
+                    existing.setDescription(topic.getDescription());
+                    if (topic.getOrderIndex() != 0) {
+                        existing.setOrderIndex(topic.getOrderIndex());
+                    }
+                    // Course and items are preserved since we're updating the existing entity
+                    return ResponseEntity.ok(catalogService.updateTopic(existing));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

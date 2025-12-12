@@ -66,9 +66,15 @@ public class CourseController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Course> updateCourse(@PathVariable long id, @RequestBody Course course) {
-        course.setId(id);
-        Course updated = catalogService.updateCourse(course);
-        return ResponseEntity.ok(updated);
+        return catalogService.getCourseById(id)
+                .map(existing -> {
+                    // Only update the fields that should change, preserve relationships
+                    existing.setTitle(course.getTitle());
+                    existing.setDescription(course.getDescription());
+                    // Topics are preserved since we're updating the existing entity
+                    return ResponseEntity.ok(catalogService.updateCourse(existing));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
