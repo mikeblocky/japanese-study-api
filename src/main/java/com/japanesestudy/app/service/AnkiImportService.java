@@ -37,8 +37,13 @@ public class AnkiImportService {
     @Transactional
     @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
     public Map<String, Object> importAnki(AnkiImportRequest request) {
-        if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
-            return Map.of("message", "No items provided", "courseId", null, "topicsCreated", 0, "itemsCreated", 0);
+        if (request == null || request.getItems().isEmpty()) {
+            Map<String, Object> result = new java.util.HashMap<>();
+            result.put("message", "No items provided");
+            result.put("courseId", null);
+            result.put("topicsCreated", 0);
+            result.put("itemsCreated", 0);
+            return result;
         }
 
         Course course = new Course();
@@ -90,12 +95,14 @@ public class AnkiImportService {
             }
         }
 
-        return Map.of(
-                "message", "Import successful",
-                "courseId", course.getId(),
-                "courseName", course.getTitle(),
-                "topicsCreated", itemsByTopic.size(),
-                "itemsCreated", itemsCreated);
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("message", "Import successful");
+        result.put("courseId", course.getId());
+        result.put("courseName", course.getTitle());
+        result.put("topicsCreated", itemsByTopic.size());
+        result.put("itemsCreated", itemsCreated);
+        return result;
+        
     }
 
     private int persistBatch(List<StudyItem> batch) {
