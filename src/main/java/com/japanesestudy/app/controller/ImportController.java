@@ -168,16 +168,22 @@ public class ImportController {
                         String back = parts.length > 1 ? cleanText(parts[1], skipMedia) : "";
                         String reading = parts.length > 2 ? cleanText(parts[2], skipMedia) : "";
 
-                        // Skip if contains media and skipMedia is true
-                        if (skipMedia && (containsMedia(front) || containsMedia(back) || containsMedia(reading))) {
+                        // Skip empty cards BEFORE checking for media
+                        if (front.trim().isEmpty() && back.trim().isEmpty()) {
                             skippedItems++;
                             continue;
                         }
 
-                        // Skip empty cards
-                        if (front.trim().isEmpty() || back.trim().isEmpty()) {
-                            skippedItems++;
-                            continue;
+                        // If skipMedia is true, check AFTER cleaning and skip only if no text remains
+                        if (skipMedia) {
+                            boolean frontHasMedia = containsMedia(parts.length > 0 ? parts[0] : "");
+                            boolean backHasMedia = containsMedia(parts.length > 1 ? parts[1] : "");
+
+                            // Only skip if card has media AND no meaningful text content
+                            if ((frontHasMedia || backHasMedia) && front.trim().isEmpty() && back.trim().isEmpty()) {
+                                skippedItems++;
+                                continue;
+                            }
                         }
 
                         AnkiItem item = new AnkiItem();
@@ -202,9 +208,15 @@ public class ImportController {
                 ));
             }
 
+            System.out.println("Successfully processed " + items.size() + " cards, skipped " + skippedItems);
+
             // Import using existing service
             AnkiImportRequest request = new AnkiImportRequest();
-            request.setCourseName(file.getOriginalFilename().replace(".apkg", ""));
+            String courseName = file.getOriginalFilename().replace(".apkg", "").trim();
+            if (courseName.isEmpty()) {
+                courseName = "Imported Course";
+            }
+            request.setCourseName(courseName);
             request.setDescription("Imported from Anki deck");
             request.setItems(items);
 
@@ -277,17 +289,15 @@ public class ImportController {
     }
 
     private boolean containsMedia(String text) {
-        if (text == null) {
+        if (text == null || text.isEmpty()) {
             return false;
         }
+        // Only check for actual media tags, not file extensions that might be in text
         return text.contains("[sound:")
                 || text.contains("<img")
                 || text.contains("[anki:play:")
-                || text.contains(".mp3")
-                || text.contains(".wav")
-                || text.contains(".jpg")
-                || text.contains(".png")
-                || text.contains(".gif");
+                || text.matches(".*<audio.*>.*")
+                || text.matches(".*<video.*>.*");
     }
 
     private void deleteDirectory(File directory) {
