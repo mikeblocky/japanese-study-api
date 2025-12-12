@@ -1,9 +1,12 @@
 package com.japanesestudy.app.entity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -13,6 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 
@@ -45,6 +49,11 @@ public class StudyItem {
     @JoinColumn(name = "topic_id")
     @JsonIgnore
     private Topic topic;
+
+    // Cascade delete user progress when study item is deleted
+    @OneToMany(mappedBy = "studyItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<UserProgress> userProgress = new ArrayList<>();
 
     // Constructors
     public StudyItem() {
@@ -119,6 +128,14 @@ public class StudyItem {
 
     public void setTopic(Topic topic) {
         this.topic = topic;
+    }
+
+    public List<UserProgress> getUserProgress() {
+        return userProgress;
+    }
+
+    public void setUserProgress(List<UserProgress> userProgress) {
+        this.userProgress = userProgress;
     }
 
     @Override
