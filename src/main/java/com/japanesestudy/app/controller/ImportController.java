@@ -115,16 +115,41 @@ public class ImportController {
             int skippedItems = 0;
             List<String> warnings = new ArrayList<>();
 
+            // Explicitly load SQLite driver
+            try {
+                Class.forName("org.sqlite.JDBC");
+            } catch (ClassNotFoundException e) {
+                return ResponseEntity.internalServerError().body(Map.of(
+                        "message", "SQLite driver not available",
+                        "error", "SQLite JDBC driver is not loaded. Please contact support."
+                ));
+            }
+
+            // Verify file exists and is readable
+            if (!collectionFile.exists() || !collectionFile.canRead()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "message", "Collection database file not found or not readable",
+                        "error", "The .apkg file might be corrupted"
+                ));
+            }
+
             String url = "jdbc:sqlite:" + collectionFile.getAbsolutePath();
+            System.out.println("Attempting to connect to SQLite database: " + url);
+
             try (Connection conn = DriverManager.getConnection(url); Statement stmt = conn.createStatement()) {
 
-                // Get deck name
+                // Get deck name - handle both old and new Anki formats
                 String deckName = "Imported Deck";
                 try (ResultSet deckRs = stmt.executeQuery(
-                        "SELECT name FROM decks WHERE name != '' LIMIT 1")) {
+                        "SELECT name FROM decks LIMIT 1")) {
                     if (deckRs.next()) {
-                        deckName = deckRs.getString("name");
+                        String name = deckRs.getString("name");
+                        if (name != null && !name.trim().isEmpty()) {
+                            deckName = name;
+                        }
                     }
+                } catch (Exception e) {
+                    System.out.println("Could not read deck name, using default: " + e.getMessage());
                 }
 
                 // Query to get cards with their notes
@@ -205,6 +230,25 @@ public class ImportController {
 
             return ResponseEntity.ok(result);
 
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Database error while reading Anki deck. The file might be corrupted or not a valid Anki deck.");
+            errorResponse.put("error", "SQLiteException: " + e.getMessage());
+            errorResponse.put("details", "Make sure you exported a valid .apkg file from Anki Desktop (File > Export > Anki Deck Package)");
+            return ResponseEntity.internalServerError().body(errorResponse);
+        } catch (java.util.zip.ZipException e) {
+            e.printStackTrace();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Invalid or corrupted .apkg file. The file could not be extracted.");
+            errorResponse.put("error", "ZipException: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "File system error. Unable to create temporary files. This might be a server configuration issue.");
+            errorResponse.put("error", "IOException: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
         } catch (Exception e) {
             e.printStackTrace();
             Map<String, Object> errorResponse = new HashMap<>();
