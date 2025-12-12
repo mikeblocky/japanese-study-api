@@ -1,9 +1,12 @@
 package com.japanesestudy.app.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class AnkiImportRequest {
+
     @NotBlank(message = "Course name is required")
     private String courseName;
     private String description;
@@ -26,7 +29,7 @@ public class AnkiImportRequest {
     }
 
     public List<AnkiItem> getItems() {
-        return items != null ? items : List.of();
+        return items != null ? items : new ArrayList<>();
     }
 
     public void setItems(List<AnkiItem> items) {
