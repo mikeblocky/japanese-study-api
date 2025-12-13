@@ -24,8 +24,10 @@ public class CacheConfig {
                 "topicsByCourse",
                 "itemsByTopic");
 
+        // Extended from 10 minutes to 1 hour for better performance
+        // Catalog data (courses, topics) is relatively static
         cacheManager.setCacheSpecification(
-                "maximumSize=10000,expireAfterWrite=" + Duration.ofMinutes(10).toSeconds() + "s,recordStats");
+                "maximumSize=10000,expireAfterWrite=" + Duration.ofHours(1).toSeconds() + "s,recordStats");
 
         return cacheManager;
     }

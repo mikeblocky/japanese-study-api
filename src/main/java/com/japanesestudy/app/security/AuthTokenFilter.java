@@ -3,6 +3,7 @@ package com.japanesestudy.app.security;
 import java.io.IOException;
 
 import io.jsonwebtoken.JwtException;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -21,15 +22,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Component
+@RequiredArgsConstructor
 public class AuthTokenFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
     private final UserDetailsService userDetailsService;
-
-    public AuthTokenFilter(JwtUtils jwtUtils, UserDetailsService userDetailsService) {
-        this.jwtUtils = jwtUtils;
-        this.userDetailsService = userDetailsService;
-    }
 
     private static final Logger log = LoggerFactory.getLogger(AuthTokenFilter.class);
 

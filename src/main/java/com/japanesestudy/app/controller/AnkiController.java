@@ -20,12 +20,9 @@ public class AnkiController {
 
     @PostMapping("/import")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> importAnki(@Valid @NonNull @RequestBody AnkiImportRequest request) {
-        try {
-            Map<String, Object> result = ankiImportService.importAnki(request);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Import failed: " + e.getMessage()));
-        }
+    public ResponseEntity<Map<String, Object>> importAnki(@Valid @NonNull @RequestBody AnkiImportRequest request) {
+        // GlobalExceptionHandler automatically handles any exceptions
+        Map<String, Object> result = ankiImportService.importAnki(request);
+        return ResponseEntity.ok(result);
     }
 }
