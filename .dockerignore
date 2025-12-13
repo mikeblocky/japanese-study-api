@@ -1,0 +1,35 @@
+# Maven build artifacts
+target/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs and temporary files
+*.log
+*.txt
+*.tmp
+
+# Maven wrapper (not needed in Docker)
+.mvn/wrapper/
+mvnw
+mvnw.cmd
+
+# Documentation (except README)
+*.md
+!README.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data files
+data/
+
+# Spring Boot DevTools restart marker
+.reloadtrigger

@@ -14,24 +14,16 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.japanesestudy.app.config.CorsProperties;
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class WebSecurityConfig {
 
     private final CorsProperties corsProperties;
-
     private final AuthEntryPointJwt unauthorizedHandler;
     private final AuthTokenFilter authTokenFilter;
-
-    public WebSecurityConfig(
-            CorsProperties corsProperties,
-            AuthEntryPointJwt unauthorizedHandler,
-            AuthTokenFilter authTokenFilter) {
-        this.corsProperties = corsProperties;
-        this.unauthorizedHandler = unauthorizedHandler;
-        this.authTokenFilter = authTokenFilter;
-    }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {

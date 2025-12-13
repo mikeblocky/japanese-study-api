@@ -1,14 +1,5 @@
 package com.japanesestudy.app.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.japanesestudy.app.dto.AnkiImportRequest;
 import com.japanesestudy.app.dto.AnkiItem;
 import com.japanesestudy.app.entity.Course;
@@ -17,22 +8,24 @@ import com.japanesestudy.app.entity.Topic;
 import com.japanesestudy.app.repository.CourseRepository;
 import com.japanesestudy.app.repository.StudyItemRepository;
 import com.japanesestudy.app.repository.TopicRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Service
+@RequiredArgsConstructor
 public class AnkiImportService {
 
     private final CourseRepository courseRepository;
     private final TopicRepository topicRepository;
     private final StudyItemRepository studyItemRepository;
 
-    public AnkiImportService(
-            CourseRepository courseRepository,
-            TopicRepository topicRepository,
-            StudyItemRepository studyItemRepository) {
-        this.courseRepository = courseRepository;
-        this.topicRepository = topicRepository;
-        this.studyItemRepository = studyItemRepository;
-    }
 
     @Transactional
     @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)

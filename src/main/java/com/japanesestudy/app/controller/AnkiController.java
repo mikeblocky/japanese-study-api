@@ -1,29 +1,22 @@
 package com.japanesestudy.app.controller;
 
-import java.util.Map;
-
+import com.japanesestudy.app.dto.AnkiImportRequest;
+import com.japanesestudy.app.service.AnkiImportService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.japanesestudy.app.dto.AnkiImportRequest;
-import com.japanesestudy.app.service.AnkiImportService;
-
-import jakarta.validation.Valid;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/anki")
+@RequiredArgsConstructor
 public class AnkiController {
 
     private final AnkiImportService ankiImportService;
-
-    public AnkiController(AnkiImportService ankiImportService) {
-        this.ankiImportService = ankiImportService;
-    }
 
     @PostMapping("/import")
     @PreAuthorize("hasRole('ADMIN')")

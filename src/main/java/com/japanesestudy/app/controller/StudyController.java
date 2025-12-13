@@ -1,34 +1,24 @@
 package com.japanesestudy.app.controller;
 
-import java.util.List;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.japanesestudy.app.dto.SubmitAnswerRequest;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.StudySession;
 import com.japanesestudy.app.entity.UserProgress;
 import com.japanesestudy.app.service.StudyService;
-
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/study")
+@RequiredArgsConstructor
 public class StudyController {
 
     private final StudyService studyService;
-
-    public StudyController(StudyService studyService) {
-        this.studyService = studyService;
-    }
 
     @GetMapping("/items/due")
     public List<UserProgress> getDueItems(@RequestParam(name = "userId", required = false) Long userId) {

@@ -18,6 +18,9 @@
 		<maven.compiler.release>${java.version}</maven.compiler.release>
 		<maven.compiler.parameters>true</maven.compiler.parameters>
 		<jjwt.version>0.11.5</jjwt.version>
+		
+		<!-- Build performance optimizations -->
+		<maven.compiler.useIncrementalCompilation>true</maven.compiler.useIncrementalCompilation>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -51,6 +54,21 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-configuration-processor</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Lombok for boilerplate reduction -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Spring Boot DevTools for instant restarts during development -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
 
@@ -104,8 +122,37 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<!-- Incremental compilation for faster builds -->
+					<useIncrementalCompilation>true</useIncrementalCompilation>
+					<!-- Fork compilation process for better performance -->
+					<fork>true</fork>
+					<meminitial>256m</meminitial>
+					<maxmem>1024m</maxmem>
+					
+					<!-- Lombok annotation processing -->
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>1.18.42</version>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

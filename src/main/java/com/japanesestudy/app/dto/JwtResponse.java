@@ -1,14 +1,21 @@
 package com.japanesestudy.app.dto;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.util.List;
 
+@Getter
+@Setter
+@NoArgsConstructor
 public class JwtResponse {
 
     private String token;
     private String type = "Bearer";
     private long id;
     private String username;
-    private final List<String> roles;
+    private List<String> roles;
 
     public JwtResponse(String accessToken, long id, String username, List<String> roles) {
         this.token = accessToken;
@@ -31,25 +38,5 @@ public class JwtResponse {
 
     public void setTokenType(String tokenType) {
         this.type = tokenType;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public List<String> getRoles() {
-        return roles;
     }
 }

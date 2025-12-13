@@ -1,14 +1,5 @@
 package com.japanesestudy.app.service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Optional;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.japanesestudy.app.entity.SessionLog;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.StudySession;
@@ -19,8 +10,18 @@ import com.japanesestudy.app.repository.StudyItemRepository;
 import com.japanesestudy.app.repository.StudySessionRepository;
 import com.japanesestudy.app.repository.UserProgressRepository;
 import com.japanesestudy.app.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class StudyService {
 
     private final UserProgressRepository userProgressRepository;
@@ -29,18 +30,6 @@ public class StudyService {
     private final SessionLogRepository sessionLogRepository;
     private final UserRepository userRepository;
 
-    public StudyService(
-            UserProgressRepository userProgressRepository,
-            StudyItemRepository studyItemRepository,
-            StudySessionRepository sessionRepository,
-            SessionLogRepository sessionLogRepository,
-            UserRepository userRepository) {
-        this.userProgressRepository = userProgressRepository;
-        this.studyItemRepository = studyItemRepository;
-        this.sessionRepository = sessionRepository;
-        this.sessionLogRepository = sessionLogRepository;
-        this.userRepository = userRepository;
-    }
 
     @Transactional(readOnly = true)
     public List<UserProgress> getDueItems(long userId) {

@@ -27,15 +27,16 @@ import com.japanesestudy.app.dto.AnkiImportRequest;
 import com.japanesestudy.app.dto.AnkiItem;
 import com.japanesestudy.app.service.AnkiImportService;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/api/import")
+@RequiredArgsConstructor
+@Slf4j
 public class ImportController {
 
     private final AnkiImportService ankiImportService;
-
-    public ImportController(AnkiImportService ankiImportService) {
-        this.ankiImportService = ankiImportService;
-    }
 
     @GetMapping("/health")
     public ResponseEntity<?> checkHealth() {
@@ -75,11 +76,11 @@ public class ImportController {
             tempDir = Files.createTempDirectory("anki-import").toFile();
 
             // Extract .apkg (which is a zip file) - extract ALL files to see what's inside
-            System.out.println("=== Extracting .apkg file ===");
+            log.debug("Extracting .apkg file");
             try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
-                    System.out.println("Found entry: " + entry.getName());
+                    log.debug("Found entry: {}", entry.getName());
                     File extractedFile = new File(tempDir, entry.getName());
 
                     if (!entry.isDirectory()) {
@@ -96,9 +97,9 @@ public class ImportController {
             }
 
             // List all files in temp directory
-            System.out.println("Files extracted to temp dir:");
+            log.debug("Files extracted to temp dir:");
             for (File f : tempDir.listFiles()) {
-                System.out.println("  - " + f.getName() + " (" + f.length() + " bytes)");
+                log.debug("  - {} ({} bytes)", f.getName(), f.length());
             }
 
             // Find collection database - PRIORITIZE collection.anki21 (newer format with actual data)
@@ -123,7 +124,7 @@ public class ImportController {
                 }
             }
 
-            System.out.println("Using database file: " + collectionFile.getName() + " (" + collectionFile.length() + " bytes)");
+            log.info("Using database file: {} ({} bytes)", collectionFile.getName(), collectionFile.length());
 
             if (!collectionFile.exists()) {
                 return ResponseEntity.badRequest()
@@ -154,23 +155,23 @@ public class ImportController {
             }
 
             String url = "jdbc:sqlite:" + collectionFile.getAbsolutePath();
-            System.out.println("Attempting to connect to SQLite database: " + url);
+            log.debug("Attempting to connect to SQLite database: {}", url);
 
             try (Connection conn = DriverManager.getConnection(url); Statement stmt = conn.createStatement()) {
 
                 // Debug: Print available tables
-                System.out.println("=== Anki Database Debug ===");
+                log.debug("=== Anki Database Debug ===");
                 try (ResultSet tables = conn.getMetaData().getTables(null, null, "%", null)) {
-                    System.out.println("Available tables:");
+                    log.debug("Available tables:");
                     while (tables.next()) {
-                        System.out.println("  - " + tables.getString("TABLE_NAME"));
+                        log.debug("  - {}", tables.getString("TABLE_NAME"));
                     }
                 }
 
                 // Check how many notes exist
                 try (ResultSet countRs = stmt.executeQuery("SELECT COUNT(*) as cnt FROM notes")) {
                     if (countRs.next()) {
-                        System.out.println("Total notes in database: " + countRs.getInt("cnt"));
+                        log.info("Total notes in database: {}", countRs.getInt("cnt"));
                     }
                 }
 
@@ -193,8 +194,8 @@ public class ImportController {
 
                         // Debug first few cards
                         if (cardCount <= 5) {
-                            System.out.println("Card " + cardCount + " fields: "
-                                    + (fields != null ? fields.substring(0, Math.min(100, fields.length())) : "null"));
+                            log.debug("Card {} fields: {}", cardCount, 
+                                    fields != null ? fields.substring(0, Math.min(100, fields.length())) : "null");
                         }
 
                         if (fields == null || fields.trim().isEmpty()) {
@@ -204,7 +205,7 @@ public class ImportController {
 
                         // Skip the Anki version warning placeholder
                         if (fields.contains("Please update to the latest Anki version")) {
-                            System.out.println("Skipping Anki version warning card");
+                            log.debug("Skipping Anki version warning card");
                             skippedItems++;
                             continue;
                         }
@@ -260,7 +261,7 @@ public class ImportController {
                 ));
             }
 
-            System.out.println("Successfully processed " + items.size() + " cards, skipped " + skippedItems);
+            log.info("Successfully processed {} cards, skipped {}", items.size(), skippedItems);
 
             // Import using existing service
             AnkiImportRequest request = new AnkiImportRequest();
@@ -280,26 +281,26 @@ public class ImportController {
             return ResponseEntity.ok(result);
 
         } catch (java.sql.SQLException e) {
-            e.printStackTrace();
+            log.error("SQL exception while reading Anki deck", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Database error while reading Anki deck. The file might be corrupted or not a valid Anki deck.");
             errorResponse.put("error", "SQLiteException: " + e.getMessage());
             errorResponse.put("details", "Make sure you exported a valid .apkg file from Anki Desktop (File > Export > Anki Deck Package)");
             return ResponseEntity.internalServerError().body(errorResponse);
         } catch (java.util.zip.ZipException e) {
-            e.printStackTrace();
+            log.error("Zip exception while extracting .apkg file", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Invalid or corrupted .apkg file. The file could not be extracted.");
             errorResponse.put("error", "ZipException: " + e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
         } catch (java.io.IOException e) {
-            e.printStackTrace();
+            log.error("IO exception during Anki import", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "File system error. Unable to create temporary files. This might be a server configuration issue.");
             errorResponse.put("error", "IOException: " + e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Unexpected exception during Anki import", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Failed to import Anki deck: " + e.getMessage());
             errorResponse.put("error", e.getClass().getSimpleName());
