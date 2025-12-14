@@ -45,7 +45,13 @@ public class AnkiImportService {
         course.setLevel("Custom");
         course = courseRepository.save(course);
 
-        Map<String, List<AnkiItem>> itemsByTopic = new TreeMap<>();
+        // Group items by topic, sorted numerically (Lesson 01 before Lesson 10)
+        Map<String, List<AnkiItem>> itemsByTopic = new TreeMap<>((a, b) -> {
+            int numA = extractNumber(a);
+            int numB = extractNumber(b);
+            if (numA != numB) return numA - numB;
+            return a.compareToIgnoreCase(b);
+        });
         for (AnkiItem item : request.getItems()) {
             String topicName = item.getTopic() != null ? item.getTopic() : "Default";
             itemsByTopic.computeIfAbsent(topicName, k -> new ArrayList<>()).add(item);
@@ -104,5 +110,11 @@ public class AnkiImportService {
         int size = batch.size();
         batch.clear();
         return size;
+    }
+
+    private int extractNumber(String title) {
+        if (title == null) return Integer.MAX_VALUE;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(title);
+        return m.find() ? Integer.parseInt(m.group()) : Integer.MAX_VALUE;
     }
 }
