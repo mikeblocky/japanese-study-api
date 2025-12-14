@@ -74,45 +74,65 @@ public class ImportService {
 
     /**
      * Finds the Anki collection database file in the extracted directory.
-     * Prioritizes .anki2 (SQLite) over .anki21b (protobuf, not supported).
+     * If both .anki2 and .anki21b exist, prefers .anki21b if it's significantly larger
+     * (Anki 2.1.50+ exports include a placeholder .anki2 with real data in .anki21b).
      * 
      * @param tempDir the directory containing extracted apkg contents
      * @return the collection database file, or null if not found
      */
     public File findCollectionDatabase(File tempDir) {
-        // Priority order: .anki2 > .anki21 (SQLite formats)
-        // .anki21b is Zstandard-compressed SQLite - we decompress it
-        
-        File collectionFile = new File(tempDir, "collection.anki2");
-        if (collectionFile.exists()) {
-            return collectionFile;
-        }
-
-        collectionFile = new File(tempDir, "collection.anki21");
-        if (collectionFile.exists()) {
-            return collectionFile;
-        }
-
-        // .anki21b is Zstd-compressed SQLite (Anki 2.1.50+)
-        // Decompress it to collection.anki2 for processing
+        File anki2File = new File(tempDir, "collection.anki2");
+        File anki21File = new File(tempDir, "collection.anki21");
         File anki21bFile = new File(tempDir, "collection.anki21b");
+        
+        // Check if .anki21b exists and is larger than .anki2 (real data vs placeholder)
         if (anki21bFile.exists()) {
-            log.info("Found .anki21b format - decompressing Zstandard file");
-            File decompressedFile = new File(tempDir, "collection.anki2");
-            try {
-                decompressZstd(anki21bFile, decompressedFile);
-                log.info("Successfully decompressed .anki21b to .anki2 ({} bytes)", decompressedFile.length());
-                return decompressedFile;
-            } catch (Exception e) {
-                log.error("Failed to decompress .anki21b file: {}", e.getMessage());
-                // Fall through to return null
+            long anki21bSize = anki21bFile.length();
+            long anki2Size = anki2File.exists() ? anki2File.length() : 0;
+            
+            // If .anki21b is more than 2x larger than .anki2, it has the real data
+            if (anki21bSize > anki2Size * 2 || anki2Size < 100000) {
+                log.info("Found .anki21b ({} bytes) - decompressing (anki2 is {} bytes, likely placeholder)", 
+                        anki21bSize, anki2Size);
+                File decompressedFile = new File(tempDir, "collection_decompressed.anki2");
+                try {
+                    decompressZstd(anki21bFile, decompressedFile);
+                    log.info("Successfully decompressed .anki21b to {} ({} bytes)", 
+                            decompressedFile.getName(), decompressedFile.length());
+                    return decompressedFile;
+                } catch (Exception e) {
+                    log.error("Failed to decompress .anki21b file: {}", e.getMessage());
+                    // Fall through to try .anki2
+                }
             }
         }
+        
+        // Use .anki2 if it exists and is a proper database
+        if (anki2File.exists()) {
+            return anki2File;
+        }
 
-        // Some exports put the database in a subfolder
+        // Try .anki21
+        if (anki21File.exists()) {
+            return anki21File;
+        }
+
+        // Search subdirectories for database files
         File[] files = tempDir.listFiles();
         if (files != null) {
-            // Prefer .anki2 files
+            // First check for .anki21b files to decompress
+            for (File f : files) {
+                if (f.getName().endsWith(".anki21b")) {
+                    File decompressedFile = new File(tempDir, f.getName().replace(".anki21b", "_decompressed.anki2"));
+                    try {
+                        decompressZstd(f, decompressedFile);
+                        return decompressedFile;
+                    } catch (Exception e) {
+                        log.error("Failed to decompress {}: {}", f.getName(), e.getMessage());
+                    }
+                }
+            }
+            // Then .anki2 files
             for (File f : files) {
                 if (f.getName().endsWith(".anki2")) {
                     return f;
@@ -122,18 +142,6 @@ public class ImportService {
             for (File f : files) {
                 if (f.getName().endsWith(".anki21")) {
                     return f;
-                }
-            }
-            // Then .anki21b (try to decompress)
-            for (File f : files) {
-                if (f.getName().endsWith(".anki21b")) {
-                    File decompressedFile = new File(tempDir, f.getName().replace(".anki21b", ".anki2"));
-                    try {
-                        decompressZstd(f, decompressedFile);
-                        return decompressedFile;
-                    } catch (Exception e) {
-                        log.error("Failed to decompress {}: {}", f.getName(), e.getMessage());
-                    }
                 }
             }
         }
