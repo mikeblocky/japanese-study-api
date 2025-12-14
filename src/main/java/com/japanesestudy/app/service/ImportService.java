@@ -1,6 +1,7 @@
 package com.japanesestudy.app.service;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import com.github.luben.zstd.ZstdInputStream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -78,7 +81,7 @@ public class ImportService {
      */
     public File findCollectionDatabase(File tempDir) {
         // Priority order: .anki2 > .anki21 (SQLite formats)
-        // Note: .anki21b is protobuf format, NOT SQLite - we return it last and handle error
+        // .anki21b is Zstandard-compressed SQLite - we decompress it
         
         File collectionFile = new File(tempDir, "collection.anki2");
         if (collectionFile.exists()) {
@@ -90,14 +93,20 @@ public class ImportService {
             return collectionFile;
         }
 
-        // .anki21b is protobuf format (Anki 2.1.50+ with v3 scheduler) - NOT SQLite!
-        // We return it here as a fallback, but it will fail with SQLITE_NOTADB error
-        // TODO: Add protobuf support for .anki21b format
-        collectionFile = new File(tempDir, "collection.anki21b");
-        if (collectionFile.exists()) {
-            log.warn("Found .anki21b format - this is protobuf format, not SQLite. Export may fail.");
-            log.warn("To fix: In Anki, go to Tools > Preferences > Scheduling and switch to v2 scheduler, then re-export.");
-            return collectionFile;
+        // .anki21b is Zstd-compressed SQLite (Anki 2.1.50+)
+        // Decompress it to collection.anki2 for processing
+        File anki21bFile = new File(tempDir, "collection.anki21b");
+        if (anki21bFile.exists()) {
+            log.info("Found .anki21b format - decompressing Zstandard file");
+            File decompressedFile = new File(tempDir, "collection.anki2");
+            try {
+                decompressZstd(anki21bFile, decompressedFile);
+                log.info("Successfully decompressed .anki21b to .anki2 ({} bytes)", decompressedFile.length());
+                return decompressedFile;
+            } catch (Exception e) {
+                log.error("Failed to decompress .anki21b file: {}", e.getMessage());
+                // Fall through to return null
+            }
         }
 
         // Some exports put the database in a subfolder
@@ -115,9 +124,37 @@ public class ImportService {
                     return f;
                 }
             }
+            // Then .anki21b (try to decompress)
+            for (File f : files) {
+                if (f.getName().endsWith(".anki21b")) {
+                    File decompressedFile = new File(tempDir, f.getName().replace(".anki21b", ".anki2"));
+                    try {
+                        decompressZstd(f, decompressedFile);
+                        return decompressedFile;
+                    } catch (Exception e) {
+                        log.error("Failed to decompress {}: {}", f.getName(), e.getMessage());
+                    }
+                }
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Decompresses a Zstandard-compressed file.
+     */
+    private void decompressZstd(File input, File output) throws Exception {
+        try (FileInputStream fis = new FileInputStream(input);
+             ZstdInputStream zis = new ZstdInputStream(fis);
+             FileOutputStream fos = new FileOutputStream(output)) {
+            
+            byte[] buffer = new byte[65536];
+            int len;
+            while ((len = zis.read(buffer)) > 0) {
+                fos.write(buffer, 0, len);
+            }
+        }
     }
 
     /**
