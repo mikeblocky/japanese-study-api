@@ -31,26 +31,11 @@ public class WebSecurityConfig {
     }
 
     /**
-     * Production password encoder: BCrypt strength 8
-     * - 4x faster than default (10)
-     * - Still cryptographically secure (OWASP recommended: 8-10)
-     * - Login time: ~75ms vs ~300ms
+     * Password encoder: BCrypt strength 10 (default, secure)
      */
     @Bean
-    @org.springframework.context.annotation.Profile("prod")
-    public PasswordEncoder prodPasswordEncoder() {
-        return new BCryptPasswordEncoder(8);
-    }
-
-    /**
-     * Development password encoder: BCrypt strength 4
-     * - Much faster for development workflow
-     * - Login time: ~20ms
-     */
-    @Bean
-    @org.springframework.context.annotation.Profile({"default", "dev"})
-    public PasswordEncoder devPasswordEncoder() {
-        return new BCryptPasswordEncoder(4);
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
