@@ -5,9 +5,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * Study item entity - vocabulary, kanji, or grammar item.
+ */
 @Entity
 @Table(name = "study_items", indexes = {
     @Index(name = "idx_study_items_topic_id", columnList = "topic_id"),
@@ -17,7 +17,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@ToString(exclude = {"topic", "userProgress", "sessionLogs"})
+@ToString(exclude = "topic")
 public class StudyItem {
 
     @Id
@@ -43,16 +43,6 @@ public class StudyItem {
     @JoinColumn(name = "topic_id")
     @JsonIgnore
     private Topic topic;
-
-    // Cascade delete user progress when study item is deleted
-    @OneToMany(mappedBy = "studyItem", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<UserProgress> userProgress = new ArrayList<>();
-
-    // Cascade delete session logs when study item is deleted
-    @OneToMany(mappedBy = "studyItem", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<SessionLog> sessionLogs = new ArrayList<>();
 
     public StudyItem(String primaryText, String secondaryText, String type) {
         this.primaryText = primaryText;

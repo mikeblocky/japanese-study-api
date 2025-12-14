@@ -65,6 +65,7 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/test/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/topics/**").permitAll()
                 // Render may probe the root path during deployment/health checks.
                 .requestMatchers("/", "/error").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
