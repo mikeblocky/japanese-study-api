@@ -71,34 +71,47 @@ public class ImportService {
 
     /**
      * Finds the Anki collection database file in the extracted directory.
-     * Prioritizes .anki21 format over .anki2 (newer format with actual data).
+     * Prioritizes .anki2 (SQLite) over .anki21b (protobuf, not supported).
      * 
      * @param tempDir the directory containing extracted apkg contents
      * @return the collection database file, or null if not found
      */
     public File findCollectionDatabase(File tempDir) {
-        // Priority order: .anki21 > .anki21b > .anki2
-        File collectionFile = new File(tempDir, "collection.anki21");
+        // Priority order: .anki2 > .anki21 (SQLite formats)
+        // Note: .anki21b is protobuf format, NOT SQLite - we return it last and handle error
+        
+        File collectionFile = new File(tempDir, "collection.anki2");
         if (collectionFile.exists()) {
             return collectionFile;
         }
 
+        collectionFile = new File(tempDir, "collection.anki21");
+        if (collectionFile.exists()) {
+            return collectionFile;
+        }
+
+        // .anki21b is protobuf format (Anki 2.1.50+ with v3 scheduler) - NOT SQLite!
+        // We return it here as a fallback, but it will fail with SQLITE_NOTADB error
+        // TODO: Add protobuf support for .anki21b format
         collectionFile = new File(tempDir, "collection.anki21b");
         if (collectionFile.exists()) {
-            return collectionFile;
-        }
-
-        collectionFile = new File(tempDir, "collection.anki2");
-        if (collectionFile.exists()) {
+            log.warn("Found .anki21b format - this is protobuf format, not SQLite. Export may fail.");
+            log.warn("To fix: In Anki, go to Tools > Preferences > Scheduling and switch to v2 scheduler, then re-export.");
             return collectionFile;
         }
 
         // Some exports put the database in a subfolder
         File[] files = tempDir.listFiles();
         if (files != null) {
+            // Prefer .anki2 files
             for (File f : files) {
-                String name = f.getName();
-                if (name.endsWith(".anki21") || name.endsWith(".anki21b") || name.endsWith(".anki2")) {
+                if (f.getName().endsWith(".anki2")) {
+                    return f;
+                }
+            }
+            // Then .anki21
+            for (File f : files) {
+                if (f.getName().endsWith(".anki21")) {
                     return f;
                 }
             }
