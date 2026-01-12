@@ -19,7 +19,7 @@ import com.github.luben.zstd.ZstdInputStream;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.japanesestudy.app.dto.AnkiItem;
+import com.japanesestudy.app.dto.importing.AnkiItem;
 
 import lombok.extern.slf4j.Slf4j;
 

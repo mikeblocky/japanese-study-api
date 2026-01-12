@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.japanesestudy.app.dto.AnkiImportRequest;
+import com.japanesestudy.app.dto.importing.AnkiImportRequest;
 import com.japanesestudy.app.service.AnkiImportService;
 import com.japanesestudy.app.service.ImportService;
 import com.japanesestudy.app.service.ImportService.ParseResult;

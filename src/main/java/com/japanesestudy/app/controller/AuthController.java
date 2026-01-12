@@ -1,9 +1,9 @@
 package com.japanesestudy.app.controller;
 
-import com.japanesestudy.app.dto.JwtResponse;
-import com.japanesestudy.app.dto.LoginRequest;
-import com.japanesestudy.app.dto.MessageResponse;
-import com.japanesestudy.app.dto.RegisterRequest;
+import com.japanesestudy.app.dto.auth.JwtResponse;
+import com.japanesestudy.app.dto.auth.LoginRequest;
+import com.japanesestudy.app.dto.auth.RegisterRequest;
+import com.japanesestudy.app.dto.common.MessageResponse;
 import com.japanesestudy.app.entity.Role;
 import com.japanesestudy.app.entity.User;
 import com.japanesestudy.app.repository.UserRepository;
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 
 @RestController
 @RequestMapping("/api/auth")

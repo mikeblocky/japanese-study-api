@@ -1,7 +1,7 @@
 package com.japanesestudy.app.service;
 
-import com.japanesestudy.app.dto.AnkiImportRequest;
-import com.japanesestudy.app.dto.AnkiItem;
+import com.japanesestudy.app.dto.importing.AnkiImportRequest;
+import com.japanesestudy.app.dto.importing.AnkiItem;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;

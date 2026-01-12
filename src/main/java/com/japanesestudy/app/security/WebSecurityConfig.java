@@ -51,6 +51,8 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/test/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/topics/**").permitAll()
+                // Progress endpoints require authentication (user-scoped)
+                .requestMatchers("/api/progress/**").authenticated()
                 // Render may probe the root path during deployment/health checks.
                 .requestMatchers("/", "/error").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()

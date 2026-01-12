@@ -1,43 +1,28 @@
-databases:
-  - name: japanese-study-db
-    databaseName: japanese_study
-    user: dbuser
-    plan: free
+# No longer using Render PostgreSQL (suspended/deprecated)
+# Database: Neon PostgreSQL (free tier) - configure DATABASE_URL in Render dashboard
 
 services:
   - type: web
     name: japanese-study-api
     runtime: java
-    # Native Java build is 2-3x faster than Docker!
     buildCommand: |
       mvn clean package -DskipTests -T 1C --batch-mode
     startCommand: |
       java -Xms256m -Xmx512m -XX:+UseContainerSupport -Dspring.profiles.active=prod -jar target/*.jar
     plan: free
     envVars:
-      - key: PGHOST
-        fromDatabase:
-          name: japanese-study-db
-          property: host
-      - key: PGPORT
-        fromDatabase:
-          name: japanese-study-db
-          property: port
-      - key: PGDATABASE
-        fromDatabase:
-          name: japanese-study-db
-          property: database
-      - key: PGUSER
-        fromDatabase:
-          name: japanese-study-db
-          property: user
-      - key: PGPASSWORD
-        fromDatabase:
-          name: japanese-study-db
-          property: password
+      # Set DATABASE_URL in Render dashboard from Neon connection string
+      # Format: jdbc:postgresql://ep-xxx.region.aws.neon.tech/neondb?user=xxx&password=xxx&sslmode=require
+      - key: DATABASE_URL
+        sync: false  # Set manually in dashboard
+      - key: DB_DRIVER
+        value: "org.postgresql.Driver"
+      - key: DB_DIALECT
+        value: "org.hibernate.dialect.PostgreSQLDialect"
       - key: CORS_ORIGINS
         value: "http://localhost:5173,https://japanese-study-seven.vercel.app,https://*.vercel.app"
       - key: JWT_SECRET
-        value: "prodJwtSecretKey2024JapaneseStudyAppSecureToken"
+        sync: false  # Set manually in dashboard
       - key: PORT
         value: "8080"
+
