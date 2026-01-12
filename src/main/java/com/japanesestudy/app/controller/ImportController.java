@@ -43,7 +43,7 @@ public class ImportController {
     }
 
     @PostMapping("/anki")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> importAnkiFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "skipMedia", defaultValue = "true") boolean skipMedia,
