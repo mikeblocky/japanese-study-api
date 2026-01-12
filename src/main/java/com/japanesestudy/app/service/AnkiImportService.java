@@ -69,7 +69,7 @@ public class AnkiImportService {
 
         int topicOrder = 0;
         int itemsCreated = 0;
-        final int batchSize = 500;
+        final int batchSize = 1000; // Match Hibernate batch_size for optimal performance
         for (Map.Entry<String, List<AnkiItem>> entry : itemsByTopic.entrySet()) {
             Topic topic = new Topic();
             topic.setTitle(entry.getKey());
