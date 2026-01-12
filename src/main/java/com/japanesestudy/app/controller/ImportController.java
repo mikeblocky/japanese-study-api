@@ -6,6 +6,8 @@ import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.japanesestudy.app.dto.importing.AnkiImportRequest;
+import com.japanesestudy.app.entity.Visibility;
+import com.japanesestudy.app.security.service.UserDetailsImpl;
 import com.japanesestudy.app.service.AnkiImportService;
 import com.japanesestudy.app.service.ImportService;
 import com.japanesestudy.app.service.ImportService.ParseResult;
@@ -47,7 +51,12 @@ public class ImportController {
     public ResponseEntity<?> importAnkiFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "skipMedia", defaultValue = "true") boolean skipMedia,
-            @RequestParam(value = "textOnly", defaultValue = "true") boolean textOnly) {
+            @RequestParam(value = "textOnly", defaultValue = "true") boolean textOnly,
+            @RequestParam(value = "visibility", defaultValue = "PRIVATE") String visibilityStr) {
+
+        // Get current user ID
+        Long userId = getCurrentUserId();
+        Visibility visibility = parseVisibility(visibilityStr);
 
         // Validate file
         if (file.isEmpty() || !file.getOriginalFilename().endsWith(".apkg")) {
@@ -80,8 +89,8 @@ public class ImportController {
             }
 
             // Import using AnkiImportService
-            AnkiImportRequest request = buildImportRequest(file, parseResult);
-            Map<String, Object> result = ankiImportService.importAnki(request);
+            AnkiImportRequest request = buildImportRequest(file, parseResult, visibility);
+            Map<String, Object> result = ankiImportService.importAnki(request, userId);
 
             // Add metadata to response
             result.put("skippedItems", parseResult.skippedItems());
@@ -132,7 +141,7 @@ public class ImportController {
         }
     }
 
-    private AnkiImportRequest buildImportRequest(MultipartFile file, ParseResult parseResult) {
+    private AnkiImportRequest buildImportRequest(MultipartFile file, ParseResult parseResult, Visibility visibility) {
         AnkiImportRequest request = new AnkiImportRequest();
         String courseName = file.getOriginalFilename().replace(".apkg", "").trim();
         if (courseName.isEmpty()) {
@@ -140,8 +149,25 @@ public class ImportController {
         }
         request.setCourseName(courseName);
         request.setDescription("Imported from Anki deck");
+        request.setVisibility(visibility);
         request.setItems(parseResult.items());
         return request;
+    }
+
+    private Long getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl) {
+            return ((UserDetailsImpl) auth.getPrincipal()).getId();
+        }
+        return null;
+    }
+
+    private Visibility parseVisibility(String visibilityStr) {
+        try {
+            return Visibility.valueOf(visibilityStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return Visibility.PRIVATE;
+        }
     }
 
     private ResponseEntity<?> buildErrorResponse(String message, String error, String details) {

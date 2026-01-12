@@ -3,6 +3,7 @@ package com.japanesestudy.app.service;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
+import com.japanesestudy.app.entity.Visibility;
 import com.japanesestudy.app.repository.CourseRepository;
 import com.japanesestudy.app.repository.StudyItemRepository;
 import com.japanesestudy.app.repository.TopicRepository;
@@ -27,6 +28,26 @@ public class CatalogService {
     @Cacheable(cacheNames = "courses")
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
+    }
+
+    /**
+     * Get courses visible to a specific user:
+     * - All PUBLIC courses
+     * - User's own PRIVATE courses
+     */
+    public List<Course> getCoursesForUser(Long userId) {
+        if (userId == null) {
+            // Anonymous user: only public courses
+            return courseRepository.findByVisibility(Visibility.PUBLIC);
+        }
+        return courseRepository.findByVisibilityOrOwnerId(Visibility.PUBLIC, userId);
+    }
+
+    /**
+     * Get only public courses (for anonymous users)
+     */
+    public List<Course> getPublicCourses() {
+        return courseRepository.findByVisibility(Visibility.PUBLIC);
     }
 
     @Cacheable(cacheNames = "courseById", key = "#courseId")

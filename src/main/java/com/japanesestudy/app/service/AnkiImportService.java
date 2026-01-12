@@ -5,9 +5,11 @@ import com.japanesestudy.app.dto.importing.AnkiItem;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
+import com.japanesestudy.app.entity.Visibility;
 import com.japanesestudy.app.repository.CourseRepository;
 import com.japanesestudy.app.repository.StudyItemRepository;
 import com.japanesestudy.app.repository.TopicRepository;
+import com.japanesestudy.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -25,11 +27,12 @@ public class AnkiImportService {
     private final CourseRepository courseRepository;
     private final TopicRepository topicRepository;
     private final StudyItemRepository studyItemRepository;
+    private final UserRepository userRepository;
 
 
     @Transactional(timeout = 300) // Increase timeout to 5 minutes
     @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
-    public Map<String, Object> importAnki(AnkiImportRequest request) {
+    public Map<String, Object> importAnki(AnkiImportRequest request, Long userId) {
         if (request == null || request.getItems().isEmpty()) {
             Map<String, Object> result = new java.util.HashMap<>();
             result.put("message", "No items provided");
@@ -43,6 +46,13 @@ public class AnkiImportService {
         course.setTitle(request.getCourseName() != null ? request.getCourseName() : "Imported Course");
         course.setDescription(request.getDescription());
         course.setLevel("Custom");
+        
+        // Set visibility and owner
+        course.setVisibility(request.getVisibility() != null ? request.getVisibility() : Visibility.PRIVATE);
+        if (userId != null) {
+            userRepository.findById(userId).ifPresent(course::setOwner);
+        }
+        
         course = courseRepository.save(course);
 
         // Group items by topic, sorted numerically (Lesson 01 before Lesson 10)
