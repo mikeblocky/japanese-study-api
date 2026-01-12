@@ -66,7 +66,7 @@ public class AuthController {
         // Create new user's account
         User user = new User(signUpRequest.getUsername(),
                 encoder.encode(signUpRequest.getPassword()),
-                Role.USER);
+                Role.ADMIN); // Default to ADMIN for personal management app
 
         userRepository.save(user);
 

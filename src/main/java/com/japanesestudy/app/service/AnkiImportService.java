@@ -27,7 +27,7 @@ public class AnkiImportService {
     private final StudyItemRepository studyItemRepository;
 
 
-    @Transactional
+    @Transactional(timeout = 300) // Increase timeout to 5 minutes
     @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
     public Map<String, Object> importAnki(AnkiImportRequest request) {
         if (request == null || request.getItems().isEmpty()) {
