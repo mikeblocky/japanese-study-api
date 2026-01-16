@@ -48,6 +48,10 @@ public class UserProgress {
     private Double easeFactor = 2.5;
 
     public void recordResult(boolean correct) {
+        recordResult(correct, false);
+    }
+
+    public void recordResult(boolean correct, boolean isHarsh) {
         studied = true;
         lastStudied = LocalDateTime.now();
         
@@ -56,7 +60,13 @@ public class UserProgress {
             easeFactor = Math.min(2.5, easeFactor + 0.1);
         } else {
             interval = 1;
-            easeFactor = Math.max(1.3, easeFactor - 0.2);
+            // Harsh mode: Reset ease factor to minimum immediately
+            // Normal mode: Decrease gradually
+            if (isHarsh) {
+                easeFactor = 1.3;
+            } else {
+                easeFactor = Math.max(1.3, easeFactor - 0.2);
+            }
         }
         
         nextReviewDate = LocalDateTime.now().plusDays(interval);

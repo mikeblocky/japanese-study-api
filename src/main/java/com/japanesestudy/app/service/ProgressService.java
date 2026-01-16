@@ -47,7 +47,21 @@ public class ProgressService {
     }
 
     @Transactional
-    public ProgressResponse recordProgress(Long userId, Long studyItemId, boolean correct) {
+    public java.util.List<ProgressResponse> getChallengeItems(Long userId, int limit) {
+        List<UserProgress> allStudied = progressRepository.findByUserId(userId).stream()
+                .filter(p -> Boolean.TRUE.equals(p.getStudied()))
+                .collect(java.util.stream.Collectors.toList());
+        
+        java.util.Collections.shuffle(allStudied);
+        
+        return allStudied.stream()
+            .limit(limit)
+            .map(this::toResponse)
+            .toList();
+    }
+
+    @Transactional
+    public ProgressResponse recordProgress(Long userId, Long studyItemId, boolean correct, boolean harshMode) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
         StudyItem item = studyItemRepository.findById(studyItemId)
@@ -56,7 +70,7 @@ public class ProgressService {
         UserProgress progress = progressRepository.findByUserIdAndStudyItemId(userId, studyItemId)
             .orElseGet(() -> UserProgress.builder().user(user).studyItem(item).build());
 
-        progress.recordResult(correct);
+        progress.recordResult(correct, harshMode);
         progress = progressRepository.save(progress);
         return toResponse(progress);
     }

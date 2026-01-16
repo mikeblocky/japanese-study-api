@@ -65,6 +65,9 @@ public class ProgressController {
     /**
      * Record a study result.
      */
+    /**
+     * Record a study result.
+     */
     @PostMapping("/record")
     public ResponseEntity<ProgressResponse> recordProgress(
             @RequestBody RecordProgressRequest request,
@@ -72,8 +75,20 @@ public class ProgressController {
         ProgressResponse progress = progressService.recordProgress(
                 userDetails.getId(),
                 request.getStudyItemId(),
-                request.isCorrect());
+                request.isCorrect(),
+                request.isHarshMode());
         return ResponseEntity.ok(progress);
+    }
+
+    /**
+     * Get items for challenge mode (random studied items).
+     */
+    @GetMapping("/challenge")
+    public ResponseEntity<List<ProgressResponse>> getChallengeItems(
+            @RequestParam(name = "limit", defaultValue = "20") int limit,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        List<ProgressResponse> items = progressService.getChallengeItems(userDetails.getId(), limit);
+        return ResponseEntity.ok(items);
     }
 
     /**

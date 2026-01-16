@@ -15,4 +15,5 @@ import lombok.NoArgsConstructor;
 public class RecordProgressRequest {
     private Long studyItemId;
     private boolean correct;
+    private boolean harshMode;
 }
