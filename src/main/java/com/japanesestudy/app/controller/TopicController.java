@@ -14,6 +14,7 @@ import java.util.List;
 public class TopicController {
 
     private final CatalogService catalogService;
+    private final com.japanesestudy.app.service.UserService userService;
 
     @GetMapping("/{id}")
     public ResponseEntity<Topic> getTopicById(@PathVariable long id) {
@@ -25,9 +26,15 @@ public class TopicController {
     @GetMapping("/{id}/items")
     public ResponseEntity<List<StudyItem>> getTopicItems(@PathVariable long id,
             @RequestParam(name = "limit", required = false) Integer limit) {
-        return ResponseEntity.ok(limit != null 
-            ? catalogService.getItemsByTopic(id, limit)
-            : catalogService.getItemsByTopic(id));
+        
+        if (limit != null) {
+            return ResponseEntity.ok(catalogService.getItemsByTopic(id, limit));
+        }
+
+        // Fetch with user progress if authenticated
+        return userService.getCurrentUser()
+            .map(user -> ResponseEntity.ok(catalogService.getItemsByTopicForUser(id, user.getId())))
+            .orElseGet(() -> ResponseEntity.ok(catalogService.getItemsByTopic(id)));
     }
 
     @PostMapping("/{id}/items")

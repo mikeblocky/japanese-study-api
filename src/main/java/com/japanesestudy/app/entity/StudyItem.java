@@ -56,4 +56,7 @@ public class StudyItem {
         this.secondaryText = secondaryText;
         this.type = type;
     }
+
+    @Transient
+    private Integer userSrsInterval;
 }

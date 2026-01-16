@@ -29,6 +29,10 @@ public class Course {
     private String description;
 
     private String level;
+    private String category;
+    private Integer difficulty;
+    private Integer estimatedHours;
+    private String tags;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
