@@ -86,6 +86,7 @@ public class ProgressService {
             .studyItemId(progress.getStudyItem().getId())
             .primaryText(progress.getStudyItem().getPrimaryText())
             .secondaryText(progress.getStudyItem().getSecondaryText())
+            .meaning(progress.getStudyItem().getMeaning())
             .studied(progress.getStudied())
             .interval(progress.getInterval())
             .easeFactor(progress.getEaseFactor())

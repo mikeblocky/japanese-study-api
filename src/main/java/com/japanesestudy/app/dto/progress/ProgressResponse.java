@@ -15,6 +15,7 @@ public class ProgressResponse {
     private Long studyItemId;
     private String primaryText;
     private String secondaryText;
+    private String meaning;
     private Boolean studied;
     private Integer interval;
     private Double easeFactor;
