@@ -5,6 +5,9 @@ import com.japanesestudy.app.entity.Topic;
 import com.japanesestudy.app.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import com.japanesestudy.app.security.service.UserDetailsImpl;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -14,7 +17,6 @@ import java.util.List;
 public class TopicController {
 
     private final CatalogService catalogService;
-    private final com.japanesestudy.app.service.UserService userService;
 
     @GetMapping("/{id}")
     public ResponseEntity<Topic> getTopicById(@PathVariable long id) {
@@ -32,9 +34,13 @@ public class TopicController {
         }
 
         // Fetch with user progress if authenticated
-        return userService.getCurrentUser()
-            .map(user -> ResponseEntity.ok(catalogService.getItemsByTopicForUser(id, user.getId())))
-            .orElseGet(() -> ResponseEntity.ok(catalogService.getItemsByTopic(id)));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl) {
+            Long userId = ((UserDetailsImpl) auth.getPrincipal()).getId();
+            return ResponseEntity.ok(catalogService.getItemsByTopicForUser(id, userId));
+        }
+
+        return ResponseEntity.ok(catalogService.getItemsByTopic(id));
     }
 
     @PostMapping("/{id}/items")
