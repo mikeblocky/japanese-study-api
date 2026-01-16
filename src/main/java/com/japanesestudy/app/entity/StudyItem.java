@@ -4,10 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * Study item entity - vocabulary, kanji, or grammar item.
- */
 @Entity
 @Table(name = "study_items", indexes = {
     @Index(name = "idx_study_items_topic_id", columnList = "topic_id"),
@@ -17,7 +16,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@ToString(exclude = "topic")
+@ToString(exclude = {"topic", "progressRecords"})
 public class StudyItem {
 
     @Id
@@ -36,13 +35,21 @@ public class StudyItem {
     private String meaning;
     private String imageUrl;
     private String audioUrl;
+    @Column(name = "item_type")
+    private String type;
 
-    private String type; // VOCABULARY, KANJI, GRAMMAR
+    @Convert(converter = com.japanesestudy.app.util.JsonMapConverter.class)
+    @Column(columnDefinition = "TEXT")
+    private java.util.Map<String, String> additionalData = new java.util.HashMap<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "topic_id")
     @JsonIgnore
     private Topic topic;
+
+    @OneToMany(mappedBy = "studyItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<UserProgress> progressRecords = new ArrayList<>();
 
     public StudyItem(String primaryText, String secondaryText, String type) {
         this.primaryText = primaryText;

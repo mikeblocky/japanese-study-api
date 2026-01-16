@@ -177,26 +177,24 @@ public class ImportService {
         int skippedItems = 0;
         List<String> warnings = new ArrayList<>();
 
-        // Load SQLite driver
         Class.forName("org.sqlite.JDBC");
-
         String url = "jdbc:sqlite:" + collectionFile.getAbsolutePath();
         log.debug("Connecting to SQLite database: {}", url);
 
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
 
-            // Log available tables for debugging
             logDatabaseTables(conn);
 
-            // Log total notes count
+            List<String> fieldNames = getFieldNamesFromModels(conn);
+            log.info("Field names from model: {}", fieldNames);
+
             try (ResultSet countRs = stmt.executeQuery("SELECT COUNT(*) as cnt FROM notes")) {
                 if (countRs.next()) {
                     log.info("Total notes in database: {}", countRs.getInt("cnt"));
                 }
             }
 
-            // Query notes
             String query = """
                     SELECT 
                         id,
@@ -259,7 +257,16 @@ public class ImportService {
                     item.setReading(reading.isEmpty() ? null : truncate(reading, 500));
                     item.setBack(truncate(meaning, 1000));
 
-                    // Group into lessons (20 cards per lesson)
+                    java.util.Map<String, String> fieldsMap = new java.util.HashMap<>();
+                    for (int i = 0; i < parts.length; i++) {
+                        String cleaned = cleanText(parts[i], skipMedia);
+                        if (!cleaned.isEmpty()) {
+                            String fieldName = i < fieldNames.size() ? fieldNames.get(i) : "Field" + (i + 1);
+                            fieldsMap.put(fieldName, cleaned);
+                        }
+                    }
+                    item.setFields(fieldsMap);
+
                     int lessonNum = (items.size() / 20) + 1;
                     item.setTopic(String.format("Lesson %02d", lessonNum));
 
@@ -352,6 +359,33 @@ public class ImportService {
         }
     }
 
+    private List<String> getFieldNamesFromModels(Connection conn) {
+        List<String> fieldNames = new ArrayList<>();
+        try (Statement stmt = conn.createStatement()) {
+            String modelsCol = null;
+            try (ResultSet rs = stmt.executeQuery("SELECT models FROM col LIMIT 1")) {
+                if (rs.next()) modelsCol = rs.getString("models");
+            }
+            if (modelsCol != null && !modelsCol.isEmpty()) {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(modelsCol);
+                for (com.fasterxml.jackson.databind.JsonNode model : root) {
+                    com.fasterxml.jackson.databind.JsonNode flds = model.get("flds");
+                    if (flds != null && flds.isArray()) {
+                        for (com.fasterxml.jackson.databind.JsonNode fld : flds) {
+                            com.fasterxml.jackson.databind.JsonNode nameNode = fld.get("name");
+                            if (nameNode != null) fieldNames.add(nameNode.asText());
+                        }
+                        if (!fieldNames.isEmpty()) break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse field names from models: {}", e.getMessage());
+        }
+        return fieldNames;
+    }
+
     private String truncate(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) {
             return text;
@@ -359,8 +393,5 @@ public class ImportService {
         return text.substring(0, maxLength);
     }
 
-    /**
-     * Result of parsing an Anki database.
-     */
     public record ParseResult(List<AnkiItem> items, int skippedItems, List<String> warnings) {}
 }

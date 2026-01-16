@@ -4,12 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
-/**
- * DTO for returning progress data to the frontend.
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,9 +15,9 @@ public class ProgressResponse {
     private Long studyItemId;
     private String primaryText;
     private String secondaryText;
-    private Integer correctCount;
-    private Integer incorrectCount;
-    private Integer masteryLevel;
+    private Boolean studied;
+    private Integer interval;
+    private Double easeFactor;
     private LocalDateTime lastStudied;
     private LocalDateTime nextReviewDate;
 }

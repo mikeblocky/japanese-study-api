@@ -20,27 +20,16 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         if (userRepository.count() == 0) {
-            log.info("🌱 Seeding default users...");
-
-            // Create Admin using builder pattern
+            log.info("Seeding default admin user...");
             User admin = User.builder()
-                    .username("admin")
-                    .password(passwordEncoder.encode("admin"))
-                    .role(Role.ADMIN)
-                    .build();
+                .username("admin")
+                .password(passwordEncoder.encode("admin"))
+                .role(Role.ADMIN)
+                .build();
             userRepository.save(admin);
-
-            // Create User using builder pattern
-            User user = User.builder()
-                    .username("user")
-                    .password(passwordEncoder.encode("user"))
-                    .role(Role.USER)
-                    .build();
-            userRepository.save(user);
-
-            log.info("✅ Default users created (admin/admin, user/user)");
+            log.info("Default admin created (admin/admin)");
         }
     }
 }

@@ -3,7 +3,6 @@ package com.japanesestudy.app.service;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
-import com.japanesestudy.app.entity.Visibility;
 import com.japanesestudy.app.repository.CourseRepository;
 import com.japanesestudy.app.repository.StudyItemRepository;
 import com.japanesestudy.app.repository.TopicRepository;
@@ -13,7 +12,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -28,26 +26,6 @@ public class CatalogService {
     @Cacheable(cacheNames = "courses")
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
-    }
-
-    /**
-     * Get courses visible to a specific user:
-     * - All PUBLIC courses
-     * - User's own PRIVATE courses
-     */
-    public List<Course> getCoursesForUser(Long userId) {
-        if (userId == null) {
-            // Anonymous user: only public courses
-            return courseRepository.findByVisibility(Visibility.PUBLIC);
-        }
-        return courseRepository.findByVisibilityOrOwnerId(Visibility.PUBLIC, userId);
-    }
-
-    /**
-     * Get only public courses (for anonymous users)
-     */
-    public List<Course> getPublicCourses() {
-        return courseRepository.findByVisibility(Visibility.PUBLIC);
     }
 
     @Cacheable(cacheNames = "courseById", key = "#courseId")
@@ -67,9 +45,7 @@ public class CatalogService {
 
     @Cacheable(cacheNames = "itemsByTopic", key = "'topic:' + #topicId + ':limit:' + #limit")
     public List<StudyItem> getItemsByTopic(long topicId, int limit) {
-        if (limit <= 0) {
-            return List.of();
-        }
+        if (limit <= 0) return List.of();
         return studyItemRepository.findByTopicId(topicId, PageRequest.of(0, limit)).getContent();
     }
 
@@ -91,7 +67,6 @@ public class CatalogService {
         courseRepository.deleteById(courseId);
     }
 
-    // ===== Topic CRUD =====
     @Transactional
     @CacheEvict(cacheNames = {"topicsByCourse", "itemsByTopic"}, allEntries = true)
     public Topic createTopic(Topic topic) {
@@ -114,7 +89,6 @@ public class CatalogService {
         return topicRepository.findById(topicId);
     }
 
-    // ===== StudyItem CRUD =====
     @Transactional
     @CacheEvict(cacheNames = {"itemsByTopic"}, allEntries = true)
     public StudyItem createStudyItem(StudyItem item) {
@@ -141,34 +115,23 @@ public class CatalogService {
     @CacheEvict(cacheNames = {"topicsByCourse"}, allEntries = true)
     public int reorderTopicsByTitle(long courseId) {
         List<Topic> topics = topicRepository.findByCourseIdOrderByOrderIndexAsc(courseId);
-
-        // Sort by extracting number from title (e.g., "Lesson 01" -> 1)
         topics.sort((a, b) -> {
             int numA = extractNumber(a.getTitle());
             int numB = extractNumber(b.getTitle());
-            if (numA != numB) {
-                return numA - numB;
-            }
+            if (numA != numB) return numA - numB;
             return a.getTitle().compareToIgnoreCase(b.getTitle());
         });
-
-        // Update orderIndex
         for (int i = 0; i < topics.size(); i++) {
             topics.get(i).setOrderIndex(i);
         }
-
         topicRepository.saveAll(topics);
         return topics.size();
     }
 
     private int extractNumber(String title) {
-        if (title == null) {
-            return Integer.MAX_VALUE;
-        }
+        if (title == null) return Integer.MAX_VALUE;
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(title);
-        if (m.find()) {
-            return Integer.parseInt(m.group());
-        }
+        if (m.find()) return Integer.parseInt(m.group());
         return Integer.MAX_VALUE;
     }
 }

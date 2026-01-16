@@ -5,16 +5,13 @@ import com.japanesestudy.app.dto.importing.AnkiItem;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
-import com.japanesestudy.app.entity.Visibility;
 import com.japanesestudy.app.repository.CourseRepository;
 import com.japanesestudy.app.repository.StudyItemRepository;
 import com.japanesestudy.app.repository.TopicRepository;
-import com.japanesestudy.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,41 +24,36 @@ public class AnkiImportService {
     private final CourseRepository courseRepository;
     private final TopicRepository topicRepository;
     private final StudyItemRepository studyItemRepository;
-    private final UserRepository userRepository;
 
-
-    @Transactional(timeout = 300) // Increase timeout to 5 minutes
+    @Transactional(timeout = 300)
     @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
-    public Map<String, Object> importAnki(AnkiImportRequest request, Long userId) {
+    public Map<String, Object> importAnki(AnkiImportRequest request) {
         if (request == null || request.getItems().isEmpty()) {
-            Map<String, Object> result = new java.util.HashMap<>();
-            result.put("message", "No items provided");
-            result.put("courseId", null);
-            result.put("topicsCreated", 0);
-            result.put("itemsCreated", 0);
-            return result;
+            Map<String, Object> empty = new java.util.HashMap<>();
+            empty.put("message", "No items provided");
+            empty.put("courseId", 0);
+            empty.put("topicsCreated", 0);
+            empty.put("itemsCreated", 0);
+            return empty;
         }
 
-        Course course = new Course();
-        course.setTitle(request.getCourseName() != null ? request.getCourseName() : "Imported Course");
-        course.setDescription(request.getDescription());
-        course.setLevel("Custom");
-        
-        // Set visibility and owner
-        course.setVisibility(request.getVisibility() != null ? request.getVisibility() : Visibility.PRIVATE);
-        if (userId != null) {
-            userRepository.findById(userId).ifPresent(course::setOwner);
+        String courseName = request.getCourseName() != null ? request.getCourseName() : "Imported Course";
+        List<Course> existingCourses = courseRepository.findByTitle(courseName);
+        for (Course existing : existingCourses) {
+            courseRepository.delete(existing);
         }
-        
+        if (!existingCourses.isEmpty()) courseRepository.flush();
+
+        Course course = new Course(courseName, request.getDescription(), "Custom");
         course = courseRepository.save(course);
 
-        // Group items by topic, sorted numerically (Lesson 01 before Lesson 10)
         Map<String, List<AnkiItem>> itemsByTopic = new TreeMap<>((a, b) -> {
             int numA = extractNumber(a);
             int numB = extractNumber(b);
             if (numA != numB) return numA - numB;
             return a.compareToIgnoreCase(b);
         });
+        
         for (AnkiItem item : request.getItems()) {
             String topicName = item.getTopic() != null ? item.getTopic() : "Default";
             itemsByTopic.computeIfAbsent(topicName, k -> new ArrayList<>()).add(item);
@@ -69,7 +61,8 @@ public class AnkiImportService {
 
         int topicOrder = 0;
         int itemsCreated = 0;
-        final int batchSize = 1000; // Match Hibernate batch_size for optimal performance
+        final int batchSize = 1000;
+
         for (Map.Entry<String, List<AnkiItem>> entry : itemsByTopic.entrySet()) {
             Topic topic = new Topic();
             topic.setTitle(entry.getKey());
@@ -77,15 +70,26 @@ public class AnkiImportService {
             topic.setOrderIndex(topicOrder++);
             topic = topicRepository.save(topic);
 
-            List<StudyItem> batch = new ArrayList<>(Math.min(entry.getValue().size(), batchSize));
+            List<StudyItem> batch = new ArrayList<>();
             for (AnkiItem ankiItem : entry.getValue()) {
                 StudyItem studyItem = new StudyItem();
-                String primaryText = ankiItem.getFront() != null && !ankiItem.getFront().trim().isEmpty()
-                        ? ankiItem.getFront() : "-";
-                String secondaryText = ankiItem.getReading() != null && !ankiItem.getReading().trim().isEmpty()
-                        ? ankiItem.getReading() : ankiItem.getFront(); // Fallback to front if no reading
-                String meaning = ankiItem.getBack() != null && !ankiItem.getBack().trim().isEmpty()
-                        ? ankiItem.getBack() : "-";
+                Map<String, String> fields = ankiItem.getFields() != null ? ankiItem.getFields() : new java.util.HashMap<>();
+                studyItem.setAdditionalData(fields);
+
+                String primaryText = fields.getOrDefault("Expression", 
+                    fields.getOrDefault("Kanji", 
+                    fields.getOrDefault("Front", ankiItem.getFront())));
+                if (primaryText == null || primaryText.isBlank()) primaryText = "-";
+
+                String secondaryText = fields.getOrDefault("Reading",
+                    fields.getOrDefault("Kana",
+                    fields.getOrDefault("Furigana", ankiItem.getReading())));
+                if (secondaryText == null || secondaryText.isBlank()) secondaryText = primaryText;
+
+                String meaning = fields.getOrDefault("Meaning",
+                    fields.getOrDefault("English",
+                    fields.getOrDefault("Back", ankiItem.getBack())));
+                if (meaning == null || meaning.isBlank()) meaning = "-";
 
                 studyItem.setPrimaryText(primaryText);
                 studyItem.setSecondaryText(secondaryText);
@@ -98,7 +102,6 @@ public class AnkiImportService {
                     itemsCreated += persistBatch(batch);
                 }
             }
-
             if (!batch.isEmpty()) {
                 itemsCreated += persistBatch(batch);
             }
@@ -111,7 +114,6 @@ public class AnkiImportService {
         result.put("topicsCreated", itemsByTopic.size());
         result.put("itemsCreated", itemsCreated);
         return result;
-        
     }
 
     private int persistBatch(List<StudyItem> batch) {

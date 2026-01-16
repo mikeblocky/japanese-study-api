@@ -13,7 +13,7 @@ public class CorsProperties {
      * Comma-separated origins; may include '*'.
      */
     @NotBlank(message = "cors.allowed-origins must not be blank")
-    private String allowedOrigins = "http://localhost:5173";
+    private String allowedOrigins = "http://localhost:5173,http://localhost:5174";
 
     public String getAllowedOrigins() {
         return allowedOrigins;

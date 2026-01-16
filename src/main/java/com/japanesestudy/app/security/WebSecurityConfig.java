@@ -5,19 +5,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 import com.japanesestudy.app.config.CorsProperties;
 import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
-@EnableMethodSecurity
 @RequiredArgsConstructor
 public class WebSecurityConfig {
 
@@ -30,9 +29,6 @@ public class WebSecurityConfig {
         return authConfig.getAuthenticationManager();
     }
 
-    /**
-     * Password encoder: BCrypt strength 10 (default, secure)
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -41,62 +37,40 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                // CORS preflight requests must be allowed through unauthenticated.
+            .csrf(csrf -> csrf.disable())
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(unauthorizedHandler))
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/test/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/topics/**").permitAll()
-                // Progress endpoints require authentication (user-scoped)
-                .requestMatchers("/api/progress/**").authenticated()
-                // Render may probe the root path during deployment/health checks.
-                .requestMatchers("/", "/error").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/courses/**", "/api/topics/**", "/api/items/**").permitAll()
+                .requestMatchers("/", "/error", "/h2-console/**").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
-                .requestMatchers("/actuator/**").hasRole("ADMIN")
-                .requestMatchers("/h2-console/**").permitAll() // Allow H2 Console
-                .anyRequest().authenticated());
-
-        // fix H2 database console: Refused to display ' in a frame because it set
-        // 'X-Frame-Options' to 'deny'
-        http.headers(headers -> headers.frameOptions(frameOption -> frameOption.sameOrigin()));
-
+                .anyRequest().authenticated()
+            );
+        http.headers(h -> h.frameOptions(fo -> fo.sameOrigin()));
         http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
-        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-
-        // Comma-separated list; may include "*".
-        java.util.List<String> origins = java.util.Arrays.stream(corsProperties.getAllowedOrigins().split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
-
-        // We authenticate via Authorization header (JWT), not cookies, so we don't need credentials.
-        // Keeping credentials disabled also makes wildcard/pattern origins safe and avoids common CORS pitfalls.
-        configuration.setAllowCredentials(false);
-
-        // Support wildcard patterns like "https://*.vercel.app" (or "*").
-        boolean hasPattern = origins.stream().anyMatch(o -> o.contains("*"));
-        if (hasPattern) {
-            configuration.setAllowedOriginPatterns(origins);
+        var config = new org.springframework.web.cors.CorsConfiguration();
+        List<String> origins = Arrays.stream(corsProperties.getAllowedOrigins().split(","))
+            .map(String::trim).filter(s -> !s.isEmpty()).toList();
+        
+        config.setAllowCredentials(false);
+        if (origins.stream().anyMatch(o -> o.contains("*"))) {
+            config.setAllowedOriginPatterns(origins);
         } else {
-            configuration.setAllowedOrigins(origins);
+            config.setAllowedOrigins(origins);
         }
-
-        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration
-                .setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Accept", "X-Requested-With"));
-        configuration.setExposedHeaders(java.util.List.of("Authorization"));
-        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With"));
+        config.setExposedHeaders(List.of("Authorization"));
+        
+        var source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }
