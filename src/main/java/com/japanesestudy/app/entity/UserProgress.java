@@ -45,7 +45,7 @@ public class UserProgress {
     private Integer interval = 1;
 
     @Builder.Default
-    private Double easeFactor = 2.5;
+    private Double easeFactor = 2.0;
 
     public void recordResult(boolean correct) {
         recordResult(correct, false);
