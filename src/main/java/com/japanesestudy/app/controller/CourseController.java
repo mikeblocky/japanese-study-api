@@ -56,6 +56,10 @@ public class CourseController {
                     existing.setTitle(course.getTitle());
                     existing.setDescription(course.getDescription());
                     existing.setLevel(course.getLevel());
+                    existing.setCategory(course.getCategory());
+                    existing.setDifficulty(course.getDifficulty());
+                    existing.setEstimatedHours(course.getEstimatedHours());
+                    existing.setTags(course.getTags());
                     return ResponseEntity.ok(catalogService.updateCourse(existing));
                 })
                 .orElse(ResponseEntity.notFound().build());
