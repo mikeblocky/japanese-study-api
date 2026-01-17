@@ -4,13 +4,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "study_items", indexes = {
-    @Index(name = "idx_study_items_topic_id", columnList = "topic_id"),
-    @Index(name = "idx_study_items_type", columnList = "item_type")
+    @Index(name = "idx_study_items_topic_id", columnList = "topic_id")
 })
 @Getter
 @Setter
@@ -33,14 +35,10 @@ public class StudyItem {
     private String secondaryText;
 
     private String meaning;
-    private String imageUrl;
-    private String audioUrl;
-    @Column(name = "item_type")
-    private String type;
 
     @Convert(converter = com.japanesestudy.app.util.JsonMapConverter.class)
     @Column(columnDefinition = "TEXT")
-    private java.util.Map<String, String> additionalData = new java.util.HashMap<>();
+    private Map<String, String> additionalData = new HashMap<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "topic_id")
@@ -51,12 +49,12 @@ public class StudyItem {
     @JsonIgnore
     private List<UserProgress> progressRecords = new ArrayList<>();
 
-    public StudyItem(String primaryText, String secondaryText, String type) {
+    public StudyItem(String primaryText, String secondaryText) {
         this.primaryText = primaryText;
         this.secondaryText = secondaryText;
-        this.type = type;
     }
 
+    /** Transient field for user-specific SRS interval (not persisted) */
     @Transient
     private Integer userSrsInterval;
 }

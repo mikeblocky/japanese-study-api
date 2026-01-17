@@ -60,36 +60,6 @@ public class GlobalExceptionHandler {
                         "Data conflict: This resource already exists or violates database constraints"));
     }
 
-    /**
-     * Handle resource not found exceptions
-     */
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
-        log.warn("Resource not found: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
-    }
-
-    /**
-     * Handle import exceptions
-     */
-    @ExceptionHandler(ImportException.class)
-    public ResponseEntity<ErrorResponse> handleImportException(ImportException ex) {
-        log.error("Import failed: {}", ex.getMessage());
-        return ResponseEntity.badRequest()
-                .body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), ex.getDetails()));
-    }
-
-    /**
-     * Handle validation exceptions
-     */
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ErrorResponse> handleValidationException(ValidationException ex) {
-        log.warn("Validation error: {}", ex.getMessage());
-        return ResponseEntity.badRequest()
-                .body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage()));
-    }
-
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         log.warn("Illegal argument: {}", ex.getMessage());

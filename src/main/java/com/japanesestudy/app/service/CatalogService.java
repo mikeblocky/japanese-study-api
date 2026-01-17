@@ -45,26 +45,20 @@ public class CatalogService {
     }
 
     public List<StudyItem> getItemsByTopicForUser(long topicId, Long userId) {
-        List<StudyItem> items = getItemsByTopic(topicId); // Use cached version
+        List<StudyItem> items = studyItemRepository.findByTopicId(topicId);
         if (userId == null) return items;
 
-        List<com.japanesestudy.app.entity.UserProgress> progressList = 
-            userProgressRepository.findByUserIdAndTopicId(userId, topicId);
-
-        java.util.Map<Long, Integer> intervalMap = progressList.stream()
+        var progressList = userProgressRepository.findByUserIdAndTopicId(userId, topicId);
+        var intervalMap = progressList.stream()
             .filter(p -> p.getStudyItem() != null)
             .collect(java.util.stream.Collectors.toMap(
                 p -> p.getStudyItem().getId(),
-                p -> p.getInterval(),
-                (v1, v2) -> v1 // In case of duplicates (shouldn't happen)
+                com.japanesestudy.app.entity.UserProgress::getInterval,
+                (v1, v2) -> v1
             ));
 
-        List<StudyItem> freshItems = studyItemRepository.findByTopicId(topicId);
-        freshItems.forEach(item -> {
-            Integer interval = intervalMap.get(item.getId());
-            item.setUserSrsInterval(interval != null ? interval : 0);
-        });
-        return freshItems;
+        items.forEach(item -> item.setUserSrsInterval(intervalMap.getOrDefault(item.getId(), 0)));
+        return items;
     }
 
     @Cacheable(cacheNames = "itemsByTopic", key = "'topic:' + #topicId + ':limit:' + #limit")

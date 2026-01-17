@@ -38,8 +38,6 @@ public class ProgressService {
         long totalStudied = allProgress.stream().filter(p -> Boolean.TRUE.equals(p.getStudied())).count();
         long dueForReview = progressRepository.findDueForReview(userId, LocalDateTime.now()).size();
         
-        System.out.println("DEBUG STATS for user " + userId + ": Total rows=" + allProgress.size() + ", Studied=" + totalStudied);
-        
         return ProgressStatsResponse.builder()
             .totalItemsStudied(totalStudied)
             .itemsDueForReview(dueForReview)

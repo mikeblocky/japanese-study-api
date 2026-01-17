@@ -1,7 +1,6 @@
 package com.japanesestudy.app.controller;
 
 import java.io.File;
-import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -66,19 +65,19 @@ public class ImportController {
 
         } catch (java.sql.SQLException e) {
             log.error("SQL exception while reading Anki deck", e);
-            return buildErrorResponse("Database error while reading Anki deck.", "SQLiteException: " + e.getMessage(), null);
+            return buildErrorResponse("Database error while reading Anki deck.", e.getMessage());
         } catch (java.util.zip.ZipException e) {
             log.error("Zip exception while extracting .apkg file", e);
             return ResponseEntity.badRequest().body(Map.of("message", "Invalid or corrupted .apkg file.", "error", "ZipException: " + e.getMessage()));
         } catch (java.io.IOException e) {
             log.error("IO exception during Anki import", e);
-            return buildErrorResponse("File system error.", "IOException: " + e.getMessage(), null);
+            return buildErrorResponse("File system error.", e.getMessage());
         } catch (ClassNotFoundException e) {
             log.error("SQLite driver not found", e);
-            return buildErrorResponse("SQLite driver not available", "ClassNotFoundException", null);
+            return buildErrorResponse("SQLite driver not available", e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected exception during Anki import", e);
-            return buildErrorResponse("Failed to import Anki deck: " + e.getMessage(), e.getClass().getSimpleName(), null);
+            return buildErrorResponse("Failed to import Anki deck: " + e.getMessage(), e.getClass().getSimpleName());
         } finally {
             importService.deleteDirectory(tempDir);
         }
@@ -103,11 +102,8 @@ public class ImportController {
         return request;
     }
 
-    private ResponseEntity<?> buildErrorResponse(String message, String error, String details) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("message", message);
-        errorResponse.put("error", error);
-        if (details != null) errorResponse.put("details", details);
-        return ResponseEntity.internalServerError().body(errorResponse);
+    private ResponseEntity<?> buildErrorResponse(String message, String details) {
+        return ResponseEntity.internalServerError()
+            .body(new com.japanesestudy.app.dto.common.ErrorResponse(500, message, details));
     }
 }

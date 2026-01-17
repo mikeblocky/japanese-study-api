@@ -17,9 +17,6 @@ public interface UserProgressRepository extends JpaRepository<UserProgress, Long
     @Query("SELECT p FROM UserProgress p WHERE p.user.id = :userId AND p.studyItem.topic.id = :topicId")
     List<UserProgress> findByUserIdAndTopicId(@Param("userId") Long userId, @Param("topicId") Long topicId);
 
-    @Query("SELECT COUNT(p) FROM UserProgress p WHERE p.user.id = :userId AND p.studied = :isStudied")
-    long countByUserIdAndStudied(@Param("userId") Long userId, @Param("isStudied") boolean isStudied);
-
     @Query("SELECT p FROM UserProgress p WHERE p.user.id = :userId AND p.nextReviewDate <= :now ORDER BY p.nextReviewDate")
     List<UserProgress> findDueForReview(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 }

@@ -11,6 +11,7 @@ import com.japanesestudy.app.security.JwtUtils;
 import com.japanesestudy.app.security.service.UserDetailsImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,6 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -44,7 +46,7 @@ public class AuthController {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
                 .body(new MessageResponse("Error: Invalid username or password"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Login failed", e);
             return ResponseEntity.internalServerError().body(new MessageResponse("Login failed: " + e.getMessage()));
         }
     }
@@ -59,7 +61,7 @@ public class AuthController {
             userRepository.save(user);
             return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Signup failed", e);
             return ResponseEntity.internalServerError().body(new MessageResponse("Signup failed: " + e.getMessage()));
         }
     }

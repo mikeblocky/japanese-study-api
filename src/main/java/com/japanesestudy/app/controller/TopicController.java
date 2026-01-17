@@ -2,13 +2,13 @@ package com.japanesestudy.app.controller;
 
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
+import com.japanesestudy.app.security.service.UserDetailsImpl;
 import com.japanesestudy.app.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import com.japanesestudy.app.security.service.UserDetailsImpl;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -26,21 +26,17 @@ public class TopicController {
     }
 
     @GetMapping("/{id}/items")
-    public ResponseEntity<List<StudyItem>> getTopicItems(@PathVariable long id,
-            @RequestParam(name = "limit", required = false) Integer limit) {
+    public ResponseEntity<List<StudyItem>> getTopicItems(
+            @PathVariable long id,
+            @RequestParam(name = "limit", required = false) Integer limit,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
         
         if (limit != null) {
             return ResponseEntity.ok(catalogService.getItemsByTopic(id, limit));
         }
 
-        // Fetch with user progress if authenticated
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl) {
-            Long userId = ((UserDetailsImpl) auth.getPrincipal()).getId();
-            return ResponseEntity.ok(catalogService.getItemsByTopicForUser(id, userId));
-        }
-
-        return ResponseEntity.ok(catalogService.getItemsByTopic(id));
+        Long userId = userDetails != null ? userDetails.getId() : null;
+        return ResponseEntity.ok(catalogService.getItemsByTopicForUser(id, userId));
     }
 
     @PostMapping("/{id}/items")

@@ -51,20 +51,10 @@ public class ProgressController {
     @GetMapping("/stats")
     public ResponseEntity<?> getStats(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        try {
-            ProgressStatsResponse stats = progressService.getStats(userDetails.getId());
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            try { e.printStackTrace(new java.io.PrintStream(new java.io.FileOutputStream("error.log"))); } catch (Exception ex) {}
-            e.printStackTrace();
-            System.out.println("STATS_ERROR: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(new com.japanesestudy.app.dto.common.MessageResponse("Error fetching stats: " + e.getMessage()));
-        }
+        ProgressStatsResponse stats = progressService.getStats(userDetails.getId());
+        return ResponseEntity.ok(stats);
     }
 
-    /**
-     * Record a study result.
-     */
     /**
      * Record a study result.
      */
