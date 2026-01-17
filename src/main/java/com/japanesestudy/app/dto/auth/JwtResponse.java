@@ -1,6 +1,5 @@
 package com.japanesestudy.app.dto.auth;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.List;
  * JWT authentication response returned after successful login.
  */
 @Getter
-@AllArgsConstructor
 public class JwtResponse {
     private final String accessToken;
     private final String type = "Bearer";
