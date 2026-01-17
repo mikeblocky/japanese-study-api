@@ -56,6 +56,8 @@ public class CourseController {
                     existing.setTitle(course.getTitle());
                     existing.setDescription(course.getDescription());
                     existing.setLevel(course.getLevel());
+                    existing.setMinLevel(course.getMinLevel());
+                    existing.setMaxLevel(course.getMaxLevel());
                     existing.setCategory(course.getCategory());
                     existing.setDifficulty(course.getDifficulty());
                     existing.setEstimatedHours(course.getEstimatedHours());

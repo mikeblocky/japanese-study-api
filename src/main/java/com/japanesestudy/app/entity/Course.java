@@ -29,6 +29,8 @@ public class Course {
     private String description;
 
     private String level;
+    private String minLevel;
+    private String maxLevel;
     private String category;
     private Integer difficulty;
     private Integer estimatedHours;
