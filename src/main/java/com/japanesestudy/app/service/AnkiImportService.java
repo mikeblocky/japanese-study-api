@@ -95,7 +95,6 @@ public class AnkiImportService {
                 studyItem.setSecondaryText(secondaryText);
                 studyItem.setMeaning(meaning);
                 studyItem.setTopic(topic);
-                studyItem.setType("VOCABULARY");
                 batch.add(studyItem);
 
                 if (batch.size() >= batchSize) {
