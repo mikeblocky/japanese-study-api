@@ -80,14 +80,4 @@ public class ProgressController {
         List<ProgressResponse> items = progressService.getChallengeItems(userDetails.getId(), limit);
         return ResponseEntity.ok(items);
     }
-
-    /**
-     * Get items due for review.
-     */
-    @GetMapping("/due")
-    public ResponseEntity<List<ProgressResponse>> getDueForReview(
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        List<ProgressResponse> due = progressService.getDueForReview(userDetails.getId());
-        return ResponseEntity.ok(due);
-    }
 }

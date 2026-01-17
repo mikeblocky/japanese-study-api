@@ -73,11 +73,6 @@ public class ProgressService {
         return toResponse(progress);
     }
 
-    @Transactional(readOnly = true)
-    public List<ProgressResponse> getDueForReview(Long userId) {
-        return progressRepository.findDueForReview(userId, LocalDateTime.now()).stream().map(this::toResponse).toList();
-    }
-
     private ProgressResponse toResponse(UserProgress progress) {
         return ProgressResponse.builder()
             .id(progress.getId())
