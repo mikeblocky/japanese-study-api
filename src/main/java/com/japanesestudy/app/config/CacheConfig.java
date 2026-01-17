@@ -8,10 +8,6 @@ import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Cache configuration for improved performance. Uses in-memory cache for
- * frequently accessed data.
- */
 @Configuration
 @EnableCaching
 public class CacheConfig {
@@ -24,8 +20,6 @@ public class CacheConfig {
                 "topicsByCourse",
                 "itemsByTopic");
 
-        // Extended from 10 minutes to 1 hour for better performance
-        // Catalog data (courses, topics) is relatively static
         cacheManager.setCacheSpecification(
                 "maximumSize=10000,expireAfterWrite=" + Duration.ofHours(1).toSeconds() + "s,recordStats");
 

@@ -23,20 +23,10 @@ import com.japanesestudy.app.dto.importing.AnkiItem;
 
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Service for handling .apkg file extraction and parsing.
- * Extracts reusable logic from ImportController for cleaner separation of concerns.
- */
 @Service
 @Slf4j
 public class ImportService {
 
-    /**
-     * Extracts an .apkg (zip) file to a temporary directory.
-     * 
-     * @param file the uploaded .apkg file
-     * @return the temporary directory containing extracted files
-     */
     public File extractApkgToTempDir(MultipartFile file) throws Exception {
         File tempDir = Files.createTempDirectory("anki-import").toFile();
 
