@@ -38,31 +38,98 @@ public class MediaService {
      * Parses the Anki media mapping file.
      * The media file in .apkg contains a JSON mapping of numeric filenames to original names.
      * Example: {"0": "audio.mp3", "1": "image.jpg"}
+     * Falls back to scanning numbered files if JSON parsing fails.
      */
     public Map<String, String> parseMediaMapping(File tempDir) {
         Map<String, String> mediaMap = new HashMap<>();
         
         File mediaFile = new File(tempDir, "media");
-        if (!mediaFile.exists()) {
-            log.debug("No media mapping file found in apkg");
-            return mediaMap;
+        if (mediaFile.exists()) {
+            try {
+                String content = Files.readString(mediaFile.toPath());
+                if (!content.trim().isEmpty() && !content.trim().equals("{}")) {
+                    mediaMap = objectMapper.readValue(content, new TypeReference<Map<String, String>>() {});
+                    log.info("Found {} media files in mapping", mediaMap.size());
+                    return mediaMap;
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse media mapping JSON: {}", e.getMessage());
+            }
         }
+        
+        // Fallback: scan for numbered files and detect their types
+        log.info("Using fallback media detection - scanning for numbered files");
+        File[] files = tempDir.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                String name = file.getName();
+                // Check if filename is a number (Anki media files are named 0, 1, 2, etc.)
+                if (name.matches("\\d+") && file.isFile() && file.length() > 0) {
+                    String extension = detectMediaType(file);
+                    if (extension != null) {
+                        String originalName = name + extension;
+                        mediaMap.put(name, originalName);
+                        log.debug("Detected media file: {} -> {}", name, originalName);
+                    }
+                }
+            }
+        }
+        
+        if (!mediaMap.isEmpty()) {
+            log.info("Fallback detection found {} media files", mediaMap.size());
+        }
+        
+        return mediaMap;
+    }
 
+    /**
+     * Detects media type by reading file magic bytes.
+     */
+    private String detectMediaType(File file) {
         try {
-            String content = Files.readString(mediaFile.toPath());
-            if (content.trim().isEmpty() || content.trim().equals("{}")) {
-                log.debug("Media mapping file is empty");
-                return mediaMap;
+            byte[] header = new byte[12];
+            try (var fis = new java.io.FileInputStream(file)) {
+                int read = fis.read(header);
+                if (read < 4) return null;
             }
             
-            mediaMap = objectMapper.readValue(content, new TypeReference<Map<String, String>>() {});
-            log.info("Found {} media files in mapping", mediaMap.size());
+            // Check for common formats
+            // MP3: starts with ID3 or 0xFF 0xFB
+            if ((header[0] == 'I' && header[1] == 'D' && header[2] == '3') ||
+                (header[0] == (byte) 0xFF && (header[1] & 0xE0) == 0xE0)) {
+                return ".mp3";
+            }
+            // WAV: RIFF....WAVE
+            if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F') {
+                return ".wav";
+            }
+            // OGG: OggS
+            if (header[0] == 'O' && header[1] == 'g' && header[2] == 'g' && header[3] == 'S') {
+                return ".ogg";
+            }
+            // PNG: 0x89 PNG
+            if (header[0] == (byte) 0x89 && header[1] == 'P' && header[2] == 'N' && header[3] == 'G') {
+                return ".png";
+            }
+            // JPEG: 0xFF 0xD8 0xFF
+            if (header[0] == (byte) 0xFF && header[1] == (byte) 0xD8 && header[2] == (byte) 0xFF) {
+                return ".jpg";
+            }
+            // GIF: GIF87a or GIF89a
+            if (header[0] == 'G' && header[1] == 'I' && header[2] == 'F') {
+                return ".gif";
+            }
+            // WEBP: RIFF....WEBP
+            if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' &&
+                header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
+                return ".webp";
+            }
             
+            return null;
         } catch (Exception e) {
-            log.warn("Failed to parse media mapping: {}", e.getMessage());
+            log.debug("Failed to detect media type for {}: {}", file.getName(), e.getMessage());
+            return null;
         }
-
-        return mediaMap;
     }
 
     /**
