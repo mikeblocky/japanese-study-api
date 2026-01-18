@@ -27,7 +27,7 @@ public class AnkiImportService {
 
     @Transactional(timeout = 300)
     @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
-    public Map<String, Object> importAnki(AnkiImportRequest request) {
+    public Map<String, Object> importAnki(AnkiImportRequest request, com.japanesestudy.app.entity.User owner) {
         if (request == null || request.getItems().isEmpty()) {
             Map<String, Object> empty = new java.util.HashMap<>();
             empty.put("message", "No items provided");
@@ -45,6 +45,7 @@ public class AnkiImportService {
         if (!existingCourses.isEmpty()) courseRepository.flush();
 
         Course course = new Course(courseName, request.getDescription(), "Custom");
+        course.setOwner(owner);
         course = courseRepository.save(course);
 
         Map<String, List<AnkiItem>> itemsByTopic = new TreeMap<>((a, b) -> {

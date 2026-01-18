@@ -3,9 +3,13 @@ package com.japanesestudy.app.controller;
 import java.io.File;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.japanesestudy.app.dto.importing.AnkiImportRequest;
+import com.japanesestudy.app.entity.User;
+import com.japanesestudy.app.repository.UserRepository;
+import com.japanesestudy.app.security.service.UserDetailsImpl;
 import com.japanesestudy.app.service.AnkiImportService;
 import com.japanesestudy.app.service.ImportService;
 import com.japanesestudy.app.service.ImportService.ParseResult;
@@ -20,6 +24,7 @@ public class ImportController {
 
     private final AnkiImportService ankiImportService;
     private final ImportService importService;
+    private final UserRepository userRepository;
 
     @GetMapping("/health")
     public ResponseEntity<?> checkHealth() {
@@ -33,10 +38,17 @@ public class ImportController {
     public ResponseEntity<?> importAnkiFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "skipMedia", defaultValue = "true") boolean skipMedia,
-            @RequestParam(value = "textOnly", defaultValue = "true") boolean textOnly) {
+            @RequestParam(value = "textOnly", defaultValue = "true") boolean textOnly,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
 
         if (file.isEmpty() || !file.getOriginalFilename().endsWith(".apkg")) {
             return ResponseEntity.badRequest().body(Map.of("message", "Invalid file. Please upload a .apkg file."));
+        }
+
+        // Get owner from current user
+        User owner = null;
+        if (userDetails != null) {
+            owner = userRepository.findById(userDetails.getId()).orElse(null);
         }
 
         File tempDir = null;
@@ -57,7 +69,7 @@ public class ImportController {
             }
 
             AnkiImportRequest request = buildImportRequest(file, parseResult);
-            Map<String, Object> result = ankiImportService.importAnki(request);
+            Map<String, Object> result = ankiImportService.importAnki(request, owner);
             result.put("skippedItems", parseResult.skippedItems());
             result.put("warnings", parseResult.warnings());
             result.put("coursesCreated", 1);

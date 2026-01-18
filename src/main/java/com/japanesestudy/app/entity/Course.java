@@ -36,9 +36,20 @@ public class Course {
     private Integer estimatedHours;
     private String tags;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    @JsonIgnore
+    private User owner;
+
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Topic> topics = new ArrayList<>();
+
+    /** Transient field to expose owner ID in JSON without loading the full User entity */
+    @Transient
+    public Long getOwnerId() {
+        return owner != null ? owner.getId() : null;
+    }
 
     public Course(String title, String description, String level) {
         this.title = title;
