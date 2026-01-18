@@ -227,6 +227,10 @@ public class ImportService {
 
                     // Skip empty cards
                     if (expression.trim().isEmpty() && meaning.trim().isEmpty()) {
+                        if (skippedItems < 10) {
+                            log.debug("Skipped empty card {}. Epression: '{}', Reading: '{}', Meaning: '{}', Parts: {}", 
+                                cardCount, expression, reading, meaning, java.util.Arrays.toString(parts));
+                        }
                         skippedItems++;
                         continue;
                     }
@@ -293,8 +297,8 @@ public class ImportService {
             text = text.replaceAll("<[^>]+>", "");
         } else {
             // Remove HTML tags but preserve <img> tags
-            // Use negative lookahead to match < that is not followed by "img"
-            text = text.replaceAll("<(?!(/?img\\b))[^>]+>", "");
+            // Use negative lookahead to match < that is not followed by "img" (case insensitive)
+            text = text.replaceAll("(?i)<(?!(/?img\\b))[^>]+>", "");
         }
 
         // Decode HTML entities
