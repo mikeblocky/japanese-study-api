@@ -75,6 +75,12 @@ public class ImportService {
         File anki21File = new File(tempDir, "collection.anki21");
         File anki21bFile = new File(tempDir, "collection.anki21b");
         
+        // Log which files exist
+        log.info("Checking for collection files in {}", tempDir.getName());
+        log.info("  collection.anki2 exists: {} (size: {} bytes)", anki2File.exists(), anki2File.exists() ? anki2File.length() : 0);
+        log.info("  collection.anki21 exists: {} (size: {} bytes)", anki21File.exists(), anki21File.exists() ? anki21File.length() : 0);
+        log.info("  collection.anki21b exists: {} (size: {} bytes)", anki21bFile.exists(), anki21bFile.exists() ? anki21bFile.length() : 0);
+        
         // Check if .anki21b exists and is larger than .anki2 (real data vs placeholder)
         if (anki21bFile.exists()) {
             long anki21bSize = anki21bFile.length();
