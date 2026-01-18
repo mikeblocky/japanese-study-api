@@ -26,14 +26,15 @@ public class StudyItem {
     @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     @NotBlank(message = "primaryText is required")
     private String primaryText;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     @NotBlank(message = "secondaryText is required")
     private String secondaryText;
 
+    @Column(columnDefinition = "TEXT")
     private String meaning;
 
     @Convert(converter = com.japanesestudy.app.util.JsonMapConverter.class)
