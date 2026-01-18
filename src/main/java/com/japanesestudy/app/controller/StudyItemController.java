@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/items")
 @RequiredArgsConstructor
@@ -27,7 +29,12 @@ public class StudyItemController {
                 existing.setPrimaryText(item.getPrimaryText());
                 existing.setSecondaryText(item.getSecondaryText());
                 existing.setMeaning(item.getMeaning());
-                existing.setAdditionalData(item.getAdditionalData());
+                // Create a NEW HashMap to ensure JPA detects the change
+                Map<String, String> newData = new java.util.HashMap<>();
+                if (item.getAdditionalData() != null) {
+                    newData.putAll(item.getAdditionalData());
+                }
+                existing.setAdditionalData(newData);
                 return ResponseEntity.ok(catalogService.updateStudyItem(existing));
             })
             .orElse(ResponseEntity.notFound().build());
