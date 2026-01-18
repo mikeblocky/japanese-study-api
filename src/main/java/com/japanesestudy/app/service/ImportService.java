@@ -284,14 +284,17 @@ public class ImportService {
             return "";
         }
 
-        // Remove HTML tags
-        text = text.replaceAll("<[^>]+>", "");
-
-        // Remove media references if requested
         if (removeMedia) {
+            // Remove media references specifically first
             text = text.replaceAll("\\[sound:[^\\]]+\\]", "");
             text = text.replaceAll("<img[^>]+>", "");
             text = text.replaceAll("\\[anki:play:[^\\]]+\\]", "");
+            // Then remove all HTML tags
+            text = text.replaceAll("<[^>]+>", "");
+        } else {
+            // Remove HTML tags but preserve <img> tags
+            // Use negative lookahead to match < that is not followed by "img"
+            text = text.replaceAll("<(?!(/?img\\b))[^>]+>", "");
         }
 
         // Decode HTML entities
