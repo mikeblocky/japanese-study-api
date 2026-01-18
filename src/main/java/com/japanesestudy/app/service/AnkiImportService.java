@@ -38,6 +38,7 @@ public class AnkiImportService {
     @Transactional(timeout = 300)
     @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
     public Map<String, Object> importAnki(AnkiImportRequest request, com.japanesestudy.app.entity.User owner, Map<String, String> mediaUrls) {
+        System.out.println("DEBUG: AnkiImportService.importAnki() called with " + (request != null ? request.getItems().size() : 0) + " items");
         if (request == null || request.getItems().isEmpty()) {
             Map<String, Object> empty = new java.util.HashMap<>();
             empty.put("message", "No items provided");

@@ -84,7 +84,9 @@ public class ImportController {
                 }
             }
 
+            System.out.println("DEBUG: About to call ankiImportService.importAnki with " + request.getItems().size() + " items");
             Map<String, Object> result = ankiImportService.importAnki(request, owner, mediaUrls);
+            System.out.println("DEBUG: ankiImportService.importAnki returned: " + result);
             result.put("skippedItems", parseResult.skippedItems());
             result.put("warnings", parseResult.warnings());
             result.put("coursesCreated", 1);
