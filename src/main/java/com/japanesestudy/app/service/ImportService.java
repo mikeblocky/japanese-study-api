@@ -207,13 +207,14 @@ public class ImportService {
                     }
 
                     if (fields == null || fields.trim().isEmpty()) {
+                        System.out.println("DEBUG: Skipped card " + cardCount + " due to null/empty fields");
                         skippedItems++;
                         continue;
                     }
 
                     // Skip Anki version warning placeholder
                     if (fields.contains("Please update to the latest Anki version")) {
-                        log.debug("Skipping Anki version warning card");
+                        System.out.println("DEBUG: Skipped Anki version warning card " + cardCount);
                         skippedItems++;
                         continue;
                     }
@@ -244,8 +245,8 @@ public class ImportService {
                     // Skip empty cards
                     if (expression.trim().isEmpty() && meaning.trim().isEmpty()) {
                         if (skippedItems < 10) {
-                            String msg = String.format("Skipped empty card %d. skipMedia=%b. Epression: '%s', Reading: '%s', Meaning: '%s', Parts: %s", 
-                                cardCount, skipMedia, expression, reading, meaning, java.util.Arrays.toString(parts));
+                            String msg = String.format("Skipped empty card %d. skipMedia=%b. Epression: '%s', Reading: '%s', Meaning: '%s', Fields: '%s'", 
+                                cardCount, skipMedia, expression, reading, meaning, fields);
                             log.debug(msg);
                             System.out.println("DEBUG: " + msg);
                         }
@@ -259,6 +260,7 @@ public class ImportService {
                         boolean backHasMedia = containsMedia(parts.length > 1 ? parts[1] : "");
 
                         if ((frontHasMedia || backHasMedia) && expression.trim().isEmpty() && meaning.trim().isEmpty()) {
+                            System.out.println("DEBUG: Skipped media-only card " + cardCount + " (skipMedia=true)");
                             skippedItems++;
                             continue;
                         }
