@@ -83,6 +83,100 @@ public class MediaService {
     }
 
     /**
+     * Builds media mapping by extracting filenames from card content and matching with numbered files.
+     * This is a fallback when the media JSON is missing or corrupted.
+     */
+    public Map<String, String> buildMediaMappingFromCards(File tempDir, java.util.List<String> allCardTexts) {
+        Map<String, String> mediaMap = new HashMap<>();
+        
+        // First, try the normal parsing
+        mediaMap = parseMediaMapping(tempDir);
+        
+        // If we got mappings with real names (not just "0.mp3"), return them
+        boolean hasRealNames = mediaMap.values().stream()
+            .anyMatch(name -> !name.matches("\\d+\\.[a-z0-9]+"));
+        if (hasRealNames) {
+            return mediaMap;
+        }
+        
+        // Extract all unique media filenames from card content
+        java.util.Set<String> referencedAudio = new java.util.LinkedHashSet<>();
+        java.util.Set<String> referencedImages = new java.util.LinkedHashSet<>();
+        
+        java.util.regex.Pattern soundPattern = java.util.regex.Pattern.compile("\\[sound:([^\\]]+)\\]");
+        java.util.regex.Pattern imgPattern = java.util.regex.Pattern.compile("<img[^>]*src=[\"']?([^\"'>\\s]+)[\"']?");
+        
+        for (String text : allCardTexts) {
+            if (text == null) continue;
+            
+            java.util.regex.Matcher soundMatcher = soundPattern.matcher(text);
+            while (soundMatcher.find()) {
+                referencedAudio.add(soundMatcher.group(1));
+            }
+            
+            java.util.regex.Matcher imgMatcher = imgPattern.matcher(text);
+            while (imgMatcher.find()) {
+                referencedImages.add(imgMatcher.group(1));
+            }
+        }
+        
+        log.info("Found {} audio and {} image references in cards", referencedAudio.size(), referencedImages.size());
+        
+        // Get numbered files by type
+        java.util.List<File> audioFiles = new java.util.ArrayList<>();
+        java.util.List<File> imageFiles = new java.util.ArrayList<>();
+        
+        File[] files = tempDir.listFiles();
+        if (files != null) {
+            // Sort by number
+            java.util.Arrays.sort(files, (a, b) -> {
+                try {
+                    return Integer.compare(Integer.parseInt(a.getName()), Integer.parseInt(b.getName()));
+                } catch (NumberFormatException e) {
+                    return a.getName().compareTo(b.getName());
+                }
+            });
+            
+            for (File file : files) {
+                if (file.getName().matches("\\d+") && file.isFile()) {
+                    String type = detectMediaType(file);
+                    if (type != null) {
+                        if (type.equals(".mp3") || type.equals(".wav") || type.equals(".ogg")) {
+                            audioFiles.add(file);
+                        } else {
+                            imageFiles.add(file);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Try to match by count - if counts match, assign in order
+        java.util.List<String> audioList = new java.util.ArrayList<>(referencedAudio);
+        java.util.List<String> imageList = new java.util.ArrayList<>(referencedImages);
+        
+        if (audioFiles.size() == audioList.size()) {
+            log.info("Audio count matches! Mapping {} audio files", audioFiles.size());
+            for (int i = 0; i < audioFiles.size(); i++) {
+                mediaMap.put(audioFiles.get(i).getName(), audioList.get(i));
+            }
+        } else if (!audioFiles.isEmpty() && !audioList.isEmpty()) {
+            log.warn("Audio count mismatch: {} files vs {} references", audioFiles.size(), audioList.size());
+        }
+        
+        if (imageFiles.size() == imageList.size()) {
+            log.info("Image count matches! Mapping {} image files", imageFiles.size());
+            for (int i = 0; i < imageFiles.size(); i++) {
+                mediaMap.put(imageFiles.get(i).getName(), imageList.get(i));
+            }
+        } else if (!imageFiles.isEmpty() && !imageList.isEmpty()) {
+            log.warn("Image count mismatch: {} files vs {} references", imageFiles.size(), imageList.size());
+        }
+        
+        return mediaMap;
+    }
+
+    /**
      * Detects media type by reading file magic bytes.
      */
     private String detectMediaType(File file) {

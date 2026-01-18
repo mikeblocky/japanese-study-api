@@ -76,7 +76,18 @@ public class ImportController {
             // Extract and store media files if not skipping media
             Map<String, String> mediaUrls = Collections.emptyMap();
             if (!skipMedia) {
-                Map<String, String> mediaMapping = mediaService.parseMediaMapping(tempDir);
+                // Collect all text from parsed cards to extract media references
+                java.util.List<String> allCardTexts = new java.util.ArrayList<>();
+                for (com.japanesestudy.app.dto.importing.AnkiItem item : parseResult.items()) {
+                    allCardTexts.add(item.getFront());
+                    allCardTexts.add(item.getBack());
+                    allCardTexts.add(item.getReading());
+                    if (item.getFields() != null) {
+                        allCardTexts.addAll(item.getFields().values());
+                    }
+                }
+                
+                Map<String, String> mediaMapping = mediaService.buildMediaMappingFromCards(tempDir, allCardTexts);
                 if (!mediaMapping.isEmpty()) {
                     log.info("Found {} media files to extract", mediaMapping.size());
                     mediaUrls = mediaService.extractAndStoreMedia(tempDir, mediaMapping);
