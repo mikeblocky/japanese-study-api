@@ -1,6 +1,7 @@
 package com.japanesestudy.app.controller;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +14,7 @@ import com.japanesestudy.app.security.service.UserDetailsImpl;
 import com.japanesestudy.app.service.AnkiImportService;
 import com.japanesestudy.app.service.ImportService;
 import com.japanesestudy.app.service.ImportService.ParseResult;
+import com.japanesestudy.app.service.MediaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,6 +26,7 @@ public class ImportController {
 
     private final AnkiImportService ankiImportService;
     private final ImportService importService;
+    private final MediaService mediaService;
     private final UserRepository userRepository;
 
     @GetMapping("/health")
@@ -69,10 +72,23 @@ public class ImportController {
             }
 
             AnkiImportRequest request = buildImportRequest(file, parseResult);
-            Map<String, Object> result = ankiImportService.importAnki(request, owner);
+
+            // Extract and store media files if not skipping media
+            Map<String, String> mediaUrls = Collections.emptyMap();
+            if (!skipMedia) {
+                Map<String, String> mediaMapping = mediaService.parseMediaMapping(tempDir);
+                if (!mediaMapping.isEmpty()) {
+                    log.info("Found {} media files to extract", mediaMapping.size());
+                    mediaUrls = mediaService.extractAndStoreMedia(tempDir, mediaMapping);
+                    log.info("Stored {} media files", mediaUrls.size());
+                }
+            }
+
+            Map<String, Object> result = ankiImportService.importAnki(request, owner, mediaUrls);
             result.put("skippedItems", parseResult.skippedItems());
             result.put("warnings", parseResult.warnings());
             result.put("coursesCreated", 1);
+            result.put("mediaFilesStored", mediaUrls.size());
             return ResponseEntity.ok(result);
 
         } catch (java.sql.SQLException e) {

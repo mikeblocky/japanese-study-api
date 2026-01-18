@@ -44,6 +44,7 @@ public class WebSecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/courses/**", "/api/topics/**", "/api/items/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/media/**").permitAll()
                 .requestMatchers("/", "/error", "/h2-console/**").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 .anyRequest().authenticated()
