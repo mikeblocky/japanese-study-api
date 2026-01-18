@@ -225,11 +225,29 @@ public class ImportService {
                     String reading = parts.length > 1 ? cleanText(parts[1], skipMedia) : "";
                     String meaning = parts.length > 2 ? cleanText(parts[2], skipMedia) : "";
 
+                    // Fallback: If expression is empty, try to find ANY non-empty part to use as expression
+                    if (expression.trim().isEmpty()) {
+                        for (String part : parts) {
+                            String cleaned = cleanText(part, skipMedia);
+                            if (!cleaned.trim().isEmpty()) {
+                                expression = cleaned;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Log status for debugging
+                    if (cardCount == 1) {
+                        log.info("Processing first card. skipMedia={}. Expression='{}'", skipMedia, expression);
+                    }
+
                     // Skip empty cards
                     if (expression.trim().isEmpty() && meaning.trim().isEmpty()) {
                         if (skippedItems < 10) {
-                            log.debug("Skipped empty card {}. Epression: '{}', Reading: '{}', Meaning: '{}', Parts: {}", 
-                                cardCount, expression, reading, meaning, java.util.Arrays.toString(parts));
+                            String msg = String.format("Skipped empty card %d. skipMedia=%b. Epression: '%s', Reading: '%s', Meaning: '%s', Parts: %s", 
+                                cardCount, skipMedia, expression, reading, meaning, java.util.Arrays.toString(parts));
+                            log.debug(msg);
+                            System.out.println("DEBUG: " + msg);
                         }
                         skippedItems++;
                         continue;
@@ -296,9 +314,9 @@ public class ImportService {
             // Then remove all HTML tags
             text = text.replaceAll("<[^>]+>", "");
         } else {
-            // Remove HTML tags but preserve <img> tags
-            // Use negative lookahead to match < that is not followed by "img" (case insensitive)
-            text = text.replaceAll("(?i)<(?!(/?img\\b))[^>]+>", "");
+            // Remove HTML tags but preserve media tags (img, audio, video, source)
+            // Use negative lookahead to match < that is not followed by one of these tags
+            text = text.replaceAll("(?i)<(?!(/?(img|audio|video|source)\\b))[^>]+>", "");
         }
 
         // Decode HTML entities
