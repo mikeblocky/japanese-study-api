@@ -26,6 +26,7 @@ public class StudyItemController {
             .map(existing -> {
                 existing.setPrimaryText(item.getPrimaryText());
                 existing.setSecondaryText(item.getSecondaryText());
+                existing.setMeaning(item.getMeaning());
                 existing.setAdditionalData(item.getAdditionalData());
                 return ResponseEntity.ok(catalogService.updateStudyItem(existing));
             })
