@@ -2,6 +2,7 @@ package com.japanesestudy.app.controller;
 
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
+import com.japanesestudy.app.security.service.UserDetailsImpl;
 import com.japanesestudy.app.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,17 +34,36 @@ public class TopicController {
         return created(catalogService.createTopic(topic));
     }
 
+    @PostMapping("/{topicId}/items")
+    public ResponseEntity<StudyItem> addItemToTopic(
+            @PathVariable Long topicId,
+            @RequestBody StudyItem item,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        Topic topic = getOrThrow(() -> catalogService.getTopicById(topicId), "Topic not found");
+        if (topic.getCourse() != null) {
+            validateOwnership(topic.getCourse().getOwner() != null ? topic.getCourse().getOwner().getId() : null, userDetails.getId());
+        }
+        item.setTopic(topic);
+        return created(catalogService.createStudyItem(item));
+    }
+
     @PutMapping("/{topicId}")
     public ResponseEntity<Topic> updateTopic(
             @PathVariable Long topicId,
             @RequestBody Topic updates) {
         Topic topic = getOrThrow(() -> catalogService.getTopicById(topicId), "Topic not found");
-        
+
         // Manual field updates for clarity
-        if (updates.getTitle() != null) topic.setTitle(updates.getTitle());
-        if (updates.getDescription() != null) topic.setDescription(updates.getDescription());
-        if (updates.getOrderIndex() != null) topic.setOrderIndex(updates.getOrderIndex());
-        
+        if (updates.getTitle() != null) {
+            topic.setTitle(updates.getTitle());
+        }
+        if (updates.getDescription() != null) {
+            topic.setDescription(updates.getDescription());
+        }
+        if (updates.getOrderIndex() != null) {
+            topic.setOrderIndex(updates.getOrderIndex());
+        }
+
         return ok(catalogService.updateTopic(topic));
     }
 

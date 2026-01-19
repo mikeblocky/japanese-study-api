@@ -38,6 +38,22 @@ public class CourseController {
         return ok(catalogService.getTopicsByCourse(courseId));
     }
 
+    @PostMapping("/{courseId}/topics")
+    public ResponseEntity<Topic> createTopicForCourse(
+            @PathVariable Long courseId,
+            @RequestBody Topic topic,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        Course course = getOrThrow(() -> catalogService.getCourseById(courseId), "Course not found");
+        validateOwnership(course.getOwner() != null ? course.getOwner().getId() : null, userDetails.getId());
+
+        topic.setCourse(course);
+        if (topic.getOrderIndex() == null) {
+            topic.setOrderIndex(catalogService.getTopicsByCourse(courseId).size());
+        }
+
+        return created(catalogService.createTopic(topic));
+    }
+
     @GetMapping
     public ResponseEntity<List<Course>> getAllCourses() {
         return ok(catalogService.getAllCourses());
