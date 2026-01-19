@@ -45,31 +45,53 @@ public class MediaService {
         
         File mediaFile = new File(tempDir, "media");
         if (mediaFile.exists()) {
+            String content = "";
             try {
-                String content = Files.readString(mediaFile.toPath());
-                if (!content.trim().isEmpty() && !content.trim().equals("{}")) {
-                    mediaMap = objectMapper.readValue(content, new TypeReference<Map<String, String>>() {});
-                    log.info("Found {} media files in mapping", mediaMap.size());
-                    return mediaMap;
-                }
+                content = Files.readString(mediaFile.toPath());
+                log.info("Reading media mapping file, length: {}", content.length());
+                
+                // Try standard parsing
+                mediaMap = objectMapper.readValue(content, new TypeReference<Map<String, String>>() {});
+                log.info("Found {} media files in mapping", mediaMap.size());
+                return mediaMap;
             } catch (Exception e) {
                 log.warn("Failed to parse media mapping JSON: {}", e.getMessage());
+                log.debug("Media file content sample: {}", content.substring(0, Math.min(content.length(), 200)));
+                
+                // Fallback: Dirty regex parsing for {"0": "file.mp3"} pattern
+                try {
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"(\\d+)\"\\s*:\\s*\"([^\"]+)\"").matcher(content);
+                    while (m.find()) {
+                        mediaMap.put(m.group(1), m.group(2));
+                    }
+                    if (!mediaMap.isEmpty()) {
+                        log.info("Recovered {} mappings via regex", mediaMap.size());
+                        return mediaMap;
+                    }
+                } catch (Exception ex) {
+                    log.error("Regex recovery failed: {}", ex.getMessage());
+                }
             }
+        } else {
+            log.warn("'media' file not found in temp directory: {}", tempDir.getAbsolutePath());
         }
         
         // Fallback: scan for numbered files and detect their types
         log.info("Using fallback media detection - scanning for numbered files");
         File[] files = tempDir.listFiles();
         if (files != null) {
+            log.info("Scanning {} files in temp dir", files.length);
             for (File file : files) {
                 String name = file.getName();
-                // Check if filename is a number (Anki media files are named 0, 1, 2, etc.)
+                // Check if filename is a number
                 if (name.matches("\\d+") && file.isFile() && file.length() > 0) {
                     String extension = detectMediaType(file);
                     if (extension != null) {
                         String originalName = name + extension;
                         mediaMap.put(name, originalName);
                         log.debug("Detected media file: {} -> {}", name, originalName);
+                    } else {
+                        log.warn("Could not detect media type for file: {}", name);
                     }
                 }
             }
@@ -187,8 +209,7 @@ public class MediaService {
                 if (read < 4) return null;
             }
             
-            // Check for common formats
-            // MP3: starts with ID3 or 0xFF 0xFB
+            // MP3: starts with ID3 or 0xFF 0xFB/F3/F2
             if ((header[0] == 'I' && header[1] == 'D' && header[2] == '3') ||
                 (header[0] == (byte) 0xFF && (header[1] & 0xE0) == 0xE0)) {
                 return ".mp3";
@@ -217,6 +238,19 @@ public class MediaService {
             if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' &&
                 header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
                 return ".webp";
+            }
+            // SVG: <svg
+            if (header[0] == '<' && header[1] == 's' && header[2] == 'v' && header[3] == 'g') {
+                return ".svg";
+            }
+            
+            // Try robust probe
+            String type = Files.probeContentType(file.toPath());
+            if (type != null) {
+                if (type.contains("audio/mpeg")) return ".mp3";
+                if (type.contains("image/jpeg")) return ".jpg";
+                if (type.contains("image/png")) return ".png";
+                if (type.contains("audio/wav")) return ".wav";
             }
             
             return null;
