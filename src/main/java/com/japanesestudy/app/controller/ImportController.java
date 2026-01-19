@@ -3,10 +3,16 @@ package com.japanesestudy.app.controller;
 import java.io.File;
 import java.util.Collections;
 import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
 import com.japanesestudy.app.dto.importing.AnkiImportRequest;
 import com.japanesestudy.app.entity.User;
 import com.japanesestudy.app.repository.UserRepository;
@@ -15,6 +21,7 @@ import com.japanesestudy.app.service.AnkiImportService;
 import com.japanesestudy.app.service.ImportService;
 import com.japanesestudy.app.service.ImportService.ParseResult;
 import com.japanesestudy.app.service.MediaService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,9 +39,9 @@ public class ImportController {
     @GetMapping("/health")
     public ResponseEntity<?> checkHealth() {
         return ResponseEntity.ok(Map.of(
-            "status", "healthy",
-            "message", "Import service is available",
-            "sqliteAvailable", isSqliteAvailable()));
+                "status", "healthy",
+                "message", "Import service is available",
+                "sqliteAvailable", isSqliteAvailable()));
     }
 
     @PostMapping("/anki")
@@ -44,7 +51,8 @@ public class ImportController {
             @RequestParam(value = "textOnly", defaultValue = "true") boolean textOnly,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
 
-        if (file.isEmpty() || !file.getOriginalFilename().endsWith(".apkg")) {
+        String originalFilename = file.getOriginalFilename();
+        if (file.isEmpty() || originalFilename == null || !originalFilename.endsWith(".apkg")) {
             return ResponseEntity.badRequest().body(Map.of("message", "Invalid file. Please upload a .apkg file."));
         }
 
@@ -67,11 +75,11 @@ public class ImportController {
 
             if (parseResult.items().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
-                    "message", "No valid text cards found in the deck.",
-                    "skippedItems", parseResult.skippedItems()));
+                        "message", "No valid text cards found in the deck.",
+                        "skippedItems", parseResult.skippedItems()));
             }
 
-            AnkiImportRequest request = buildImportRequest(file, parseResult);
+            AnkiImportRequest request = buildImportRequest(originalFilename, parseResult);
 
             // Extract and store media files if not skipping media
             Map<String, String> mediaUrls = Collections.emptyMap();
@@ -86,7 +94,7 @@ public class ImportController {
                         allCardTexts.addAll(item.getFields().values());
                     }
                 }
-                
+
                 Map<String, String> mediaMapping = mediaService.buildMediaMappingFromCards(tempDir, allCardTexts);
                 if (!mediaMapping.isEmpty()) {
                     log.info("Found {} media files to extract", mediaMapping.size());
@@ -133,10 +141,12 @@ public class ImportController {
         }
     }
 
-    private AnkiImportRequest buildImportRequest(MultipartFile file, ParseResult parseResult) {
+    private AnkiImportRequest buildImportRequest(String originalFilename, ParseResult parseResult) {
         AnkiImportRequest request = new AnkiImportRequest();
-        String courseName = file.getOriginalFilename().replace(".apkg", "").trim();
-        if (courseName.isEmpty()) courseName = "Imported Course";
+        String courseName = originalFilename != null ? originalFilename.replace(".apkg", "").trim() : "";
+        if (courseName.isEmpty()) {
+            courseName = "Imported Course";
+        }
         request.setCourseName(courseName);
         request.setDescription("Imported from Anki deck");
         request.setItems(parseResult.items());
@@ -145,6 +155,6 @@ public class ImportController {
 
     private ResponseEntity<?> buildErrorResponse(String message, String details) {
         return ResponseEntity.internalServerError()
-            .body(new com.japanesestudy.app.dto.common.ErrorResponse(500, message, details));
+                .body(new com.japanesestudy.app.dto.common.ErrorResponse(500, message, details));
     }
 }

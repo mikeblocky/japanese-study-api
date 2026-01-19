@@ -4,21 +4,20 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import com.github.luben.zstd.ZstdInputStream;
-
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.github.luben.zstd.ZstdInputStream;
 import com.japanesestudy.app.dto.importing.AnkiItem;
 
 import lombok.extern.slf4j.Slf4j;
@@ -63,10 +62,11 @@ public class ImportService {
     }
 
     /**
-     * Finds the Anki collection database file in the extracted directory.
-     * If both .anki2 and .anki21b exist, prefers .anki21b if it's significantly larger
-     * (Anki 2.1.50+ exports include a placeholder .anki2 with real data in .anki21b).
-     * 
+     * Finds the Anki collection database file in the extracted directory. If
+     * both .anki2 and .anki21b exist, prefers .anki21b if it's significantly
+     * larger (Anki 2.1.50+ exports include a placeholder .anki2 with real data
+     * in .anki21b).
+     *
      * @param tempDir the directory containing extracted apkg contents
      * @return the collection database file, or null if not found
      */
@@ -74,35 +74,35 @@ public class ImportService {
         File anki2File = new File(tempDir, "collection.anki2");
         File anki21File = new File(tempDir, "collection.anki21");
         File anki21bFile = new File(tempDir, "collection.anki21b");
-        
+
         // Log which files exist
         log.info("Checking for collection files in {}", tempDir.getName());
         log.info("  collection.anki2 exists: {} (size: {} bytes)", anki2File.exists(), anki2File.exists() ? anki2File.length() : 0);
         log.info("  collection.anki21 exists: {} (size: {} bytes)", anki21File.exists(), anki21File.exists() ? anki21File.length() : 0);
         log.info("  collection.anki21b exists: {} (size: {} bytes)", anki21bFile.exists(), anki21bFile.exists() ? anki21bFile.length() : 0);
-        
+
         // Check if .anki21b exists and is larger than .anki2 (real data vs placeholder)
         if (anki21bFile.exists()) {
             long anki21bSize = anki21bFile.length();
             long anki2Size = anki2File.exists() ? anki2File.length() : 0;
-            
+
             // If .anki21b is more than 2x larger than .anki2, it has the real data
             if (anki21bSize > anki2Size * 2 || anki2Size < 100000) {
-                log.info("Found .anki21b ({} bytes) - decompressing (anki2 is {} bytes, likely placeholder)", 
+                log.info("Found .anki21b ({} bytes) - decompressing (anki2 is {} bytes, likely placeholder)",
                         anki21bSize, anki2Size);
                 File decompressedFile = new File(tempDir, "collection_decompressed.anki2");
                 try {
                     decompressZstd(anki21bFile, decompressedFile);
-                    log.info("Successfully decompressed .anki21b to {} ({} bytes)", 
+                    log.info("Successfully decompressed .anki21b to {} ({} bytes)",
                             decompressedFile.getName(), decompressedFile.length());
                     return decompressedFile;
-                } catch (Exception e) {
+                } catch (java.io.IOException e) {
                     log.error("Failed to decompress .anki21b file: {}", e.getMessage());
                     // Fall through to try .anki2
                 }
             }
         }
-        
+
         // Use .anki2 if it exists and is a proper database
         if (anki2File.exists()) {
             return anki2File;
@@ -123,7 +123,7 @@ public class ImportService {
                     try {
                         decompressZstd(f, decompressedFile);
                         return decompressedFile;
-                    } catch (Exception e) {
+                    } catch (java.io.IOException e) {
                         log.error("Failed to decompress {}: {}", f.getName(), e.getMessage());
                     }
                 }
@@ -148,11 +148,9 @@ public class ImportService {
     /**
      * Decompresses a Zstandard-compressed file.
      */
-    private void decompressZstd(File input, File output) throws Exception {
-        try (FileInputStream fis = new FileInputStream(input);
-             ZstdInputStream zis = new ZstdInputStream(fis);
-             FileOutputStream fos = new FileOutputStream(output)) {
-            
+    private void decompressZstd(File input, File output) throws java.io.IOException {
+        try (FileInputStream fis = new FileInputStream(input); ZstdInputStream zis = new ZstdInputStream(fis); FileOutputStream fos = new FileOutputStream(output)) {
+
             byte[] buffer = new byte[65536];
             int len;
             while ((len = zis.read(buffer)) > 0) {
@@ -163,9 +161,9 @@ public class ImportService {
 
     /**
      * Parses notes from an Anki SQLite database and converts them to AnkiItems.
-     * 
+     *
      * @param collectionFile the Anki collection database file
-     * @param skipMedia      whether to skip cards that only contain media
+     * @param skipMedia whether to skip cards that only contain media
      * @return parsing result containing items, skipped count, and warnings
      */
     public ParseResult parseAnkiDatabase(File collectionFile, boolean skipMedia) throws Exception {
@@ -177,8 +175,7 @@ public class ImportService {
         String url = "jdbc:sqlite:" + collectionFile.getAbsolutePath();
         log.debug("Connecting to SQLite database: {}", url);
 
-        try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
+        try (Connection conn = DriverManager.getConnection(url); Statement stmt = conn.createStatement()) {
 
             logDatabaseTables(conn);
 
@@ -213,14 +210,14 @@ public class ImportService {
                     }
 
                     if (fields == null || fields.trim().isEmpty()) {
-                        System.out.println("DEBUG: Skipped card " + cardCount + " due to null/empty fields");
+                        log.debug("Skipped card {} due to null/empty fields", cardCount);
                         skippedItems++;
                         continue;
                     }
 
                     // Skip Anki version warning placeholder
                     if (fields.contains("Please update to the latest Anki version")) {
-                        System.out.println("DEBUG: Skipped Anki version warning card " + cardCount);
+                        log.debug("Skipped Anki version warning card {}", cardCount);
                         skippedItems++;
                         continue;
                     }
@@ -251,10 +248,9 @@ public class ImportService {
                     // Skip empty cards
                     if (expression.trim().isEmpty() && meaning.trim().isEmpty()) {
                         if (skippedItems < 10) {
-                            String msg = String.format("Skipped empty card %d. skipMedia=%b. Epression: '%s', Reading: '%s', Meaning: '%s', Fields: '%s'", 
-                                cardCount, skipMedia, expression, reading, meaning, fields);
+                            String msg = String.format("Skipped empty card %d. skipMedia=%b. Expression: '%s', Reading: '%s', Meaning: '%s', Fields: '%s'",
+                                    cardCount, skipMedia, expression, reading, meaning, fields);
                             log.debug(msg);
-                            System.out.println("DEBUG: " + msg);
                         }
                         skippedItems++;
                         continue;
@@ -266,7 +262,7 @@ public class ImportService {
                         boolean backHasMedia = containsMedia(parts.length > 1 ? parts[1] : "");
 
                         if ((frontHasMedia || backHasMedia) && expression.trim().isEmpty() && meaning.trim().isEmpty()) {
-                            System.out.println("DEBUG: Skipped media-only card " + cardCount + " (skipMedia=true)");
+                            log.debug("Skipped media-only card {} (skipMedia=true)", cardCount);
                             skippedItems++;
                             continue;
                         }
@@ -307,7 +303,8 @@ public class ImportService {
     }
 
     /**
-     * Cleans text by removing HTML tags, media references, and decoding HTML entities.
+     * Cleans text by removing HTML tags, media references, and decoding HTML
+     * entities.
      */
     public String cleanText(String text, boolean removeMedia) {
         if (text == null) {
@@ -387,7 +384,9 @@ public class ImportService {
         try (Statement stmt = conn.createStatement()) {
             String modelsCol = null;
             try (ResultSet rs = stmt.executeQuery("SELECT models FROM col LIMIT 1")) {
-                if (rs.next()) modelsCol = rs.getString("models");
+                if (rs.next()) {
+                    modelsCol = rs.getString("models");
+                }
             }
             if (modelsCol != null && !modelsCol.isEmpty()) {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -397,13 +396,17 @@ public class ImportService {
                     if (flds != null && flds.isArray()) {
                         for (com.fasterxml.jackson.databind.JsonNode fld : flds) {
                             com.fasterxml.jackson.databind.JsonNode nameNode = fld.get("name");
-                            if (nameNode != null) fieldNames.add(nameNode.asText());
+                            if (nameNode != null) {
+                                fieldNames.add(nameNode.asText());
+                            }
                         }
-                        if (!fieldNames.isEmpty()) break;
+                        if (!fieldNames.isEmpty()) {
+                            break;
+                        }
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (java.io.IOException | SQLException e) {
             log.warn("Could not parse field names from models: {}", e.getMessage());
         }
         return fieldNames;
@@ -416,5 +419,7 @@ public class ImportService {
         return text.substring(0, maxLength);
     }
 
-    public record ParseResult(List<AnkiItem> items, int skippedItems, List<String> warnings) {}
+    public record ParseResult(List<AnkiItem> items, int skippedItems, List<String> warnings) {
+
+    }
 }

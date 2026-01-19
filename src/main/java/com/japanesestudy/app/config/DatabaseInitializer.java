@@ -4,6 +4,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Configuration
@@ -17,7 +18,7 @@ public class DatabaseInitializer {
                 try {
                     jdbcTemplate.queryForList("SELECT 1 FROM users LIMIT 1");
                     log.info("Table 'users' exists.");
-                } catch (Exception e) {
+                } catch (org.springframework.dao.DataAccessException e) {
                     log.warn("Table 'users' not found. Attempting manual creation...");
                     String sql = """
                         CREATE TABLE IF NOT EXISTS users (
@@ -30,7 +31,7 @@ public class DatabaseInitializer {
                     jdbcTemplate.execute(sql);
                     log.info("Created table 'users' manually.");
                 }
-            } catch (Exception ex) {
+            } catch (org.springframework.dao.DataAccessException ex) {
                 log.error("Failed to check/create schema: " + ex.getMessage());
             }
         };

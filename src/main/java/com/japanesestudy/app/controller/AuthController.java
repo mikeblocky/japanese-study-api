@@ -1,5 +1,17 @@
 package com.japanesestudy.app.controller;
 
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.japanesestudy.app.dto.auth.JwtResponse;
 import com.japanesestudy.app.dto.auth.LoginRequest;
 import com.japanesestudy.app.dto.auth.RegisterRequest;
@@ -9,16 +21,10 @@ import com.japanesestudy.app.entity.User;
 import com.japanesestudy.app.repository.UserRepository;
 import com.japanesestudy.app.security.JwtUtils;
 import com.japanesestudy.app.security.service.UserDetailsImpl;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -35,17 +41,17 @@ public class AuthController {
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(authentication);
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             List<String> roles = userDetails.getAuthorities().stream()
-                .map(a -> a.getAuthority()).toList();
+                    .map(a -> a.getAuthority()).toList();
             return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), roles));
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
-                .body(new MessageResponse("Error: Invalid username or password"));
-        } catch (Exception e) {
+                    .body(new MessageResponse("Error: Invalid username or password"));
+        } catch (RuntimeException e) {
             log.error("Login failed", e);
             return ResponseEntity.internalServerError().body(new MessageResponse("Login failed: " + e.getMessage()));
         }
@@ -60,7 +66,7 @@ public class AuthController {
             User user = new User(signUpRequest.getUsername(), encoder.encode(signUpRequest.getPassword()), Role.USER);
             userRepository.save(user);
             return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Signup failed", e);
             return ResponseEntity.internalServerError().body(new MessageResponse("Signup failed: " + e.getMessage()));
         }
