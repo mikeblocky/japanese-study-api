@@ -1,10 +1,13 @@
 package com.japanesestudy.app.dto.progress;
 
+import java.time.LocalDateTime;
+
+import com.japanesestudy.app.model.SrsRating;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 
 public class ProgressDtos {
 
@@ -13,6 +16,7 @@ public class ProgressDtos {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ProgressResponse {
+
         private Long id;
         private Long studyItemId;
         private String primaryText;
@@ -30,6 +34,7 @@ public class ProgressDtos {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ProgressStatsResponse {
+
         private long totalItemsStudied;
         private long itemsDueForReview;
     }
@@ -39,8 +44,10 @@ public class ProgressDtos {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class RecordProgressRequest {
+
         private Long studyItemId;
-        private boolean correct;
+        private SrsRating rating;
+        private Boolean correct;
         private boolean harshMode;
     }
 }

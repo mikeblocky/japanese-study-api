@@ -1,0 +1,3 @@
+-- Ensure soft-delete columns exist for local H2 db
+ALTER TABLE topics ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE NOT NULL;
+ALTER TABLE study_items ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE NOT NULL;

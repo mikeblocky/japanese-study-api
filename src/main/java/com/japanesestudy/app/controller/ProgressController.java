@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.japanesestudy.app.dto.progress.ProgressDtos.ProgressResponse;
 import com.japanesestudy.app.dto.progress.ProgressDtos.ProgressStatsResponse;
 import com.japanesestudy.app.dto.progress.ProgressDtos.RecordProgressRequest;
+import com.japanesestudy.app.model.SrsRating;
 import com.japanesestudy.app.security.service.UserDetailsImpl;
 import com.japanesestudy.app.service.ProgressService;
 
@@ -47,10 +48,17 @@ public class ProgressController {
     public ResponseEntity<ProgressResponse> recordProgress(
             @RequestBody RecordProgressRequest request,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        SrsRating rating = request.getRating();
+        if (rating == null && request.getCorrect() != null) {
+            rating = Boolean.TRUE.equals(request.getCorrect()) ? SrsRating.GOOD : SrsRating.AGAIN;
+        }
+        if (rating == null) {
+            rating = SrsRating.GOOD;
+        }
         return ResponseEntity.ok(progressService.recordProgress(
                 userDetails.getId(),
                 request.getStudyItemId(),
-                request.isCorrect(),
+                rating,
                 request.isHarshMode()));
     }
 
