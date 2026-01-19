@@ -17,7 +17,6 @@ import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,14 +25,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.luben.zstd.ZstdInputStream;
 import com.japanesestudy.app.dto.importing.AnkiItem;
-import com.japanesestudy.app.util.Utils.EvictAllCaches;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
 import com.japanesestudy.app.entity.User;
 import com.japanesestudy.app.repository.CourseRepository;
-import com.japanesestudy.app.repository.TopicRepository;
 import com.japanesestudy.app.repository.StudyItemRepository;
+import com.japanesestudy.app.repository.TopicRepository;
+import com.japanesestudy.app.util.Utils.EvictAllCaches;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -83,7 +83,9 @@ public class AnkiService {
             }
 
             String courseName = displayName != null ? displayName.replace(".apkg", "").trim() : "Imported Course";
-            if (courseName.isEmpty()) courseName = "Imported Course";
+            if (courseName.isEmpty()) {
+                courseName = "Imported Course";
+            }
 
             deletePreviousCourses(courseName, owner);
 
@@ -98,6 +100,7 @@ public class AnkiService {
 
             Map<String, Object> result = new HashMap<>();
             result.put("message", "Import successful");
+            result.put("coursesCreated", 1);
             result.put("courseId", course.getId());
             result.put("courseName", course.getTitle());
             result.put("topicsCreated", itemsByTopic.size());
@@ -150,8 +153,12 @@ public class AnkiService {
             }
         }
 
-        if (anki2File.exists()) return anki2File;
-        if (anki21File.exists()) return anki21File;
+        if (anki2File.exists()) {
+            return anki2File;
+        }
+        if (anki21File.exists()) {
+            return anki21File;
+        }
 
         File[] files = tempDir.listFiles();
         if (files != null) {
@@ -166,16 +173,22 @@ public class AnkiService {
                     }
                 }
             }
-            for (File f : files) if (f.getName().endsWith(".anki2")) return f;
-            for (File f : files) if (f.getName().endsWith(".anki21")) return f;
+            for (File f : files) {
+                if (f.getName().endsWith(".anki2")) {
+                    return f;
+                }
+            }
+            for (File f : files) {
+                if (f.getName().endsWith(".anki21")) {
+                    return f;
+                }
+            }
         }
         return null;
     }
 
     private void decompressZstd(File input, File output) throws java.io.IOException {
-        try (FileInputStream fis = new FileInputStream(input);
-             ZstdInputStream zis = new ZstdInputStream(fis);
-             FileOutputStream fos = new FileOutputStream(output)) {
+        try (FileInputStream fis = new FileInputStream(input); ZstdInputStream zis = new ZstdInputStream(fis); FileOutputStream fos = new FileOutputStream(output)) {
             byte[] buffer = new byte[ZSTD_BUFFER_SIZE];
             int len;
             while ((len = zis.read(buffer)) > 0) {
@@ -197,8 +210,8 @@ public class AnkiService {
             try (ResultSet rs = stmt.executeQuery(NOTES_QUERY)) {
                 while (rs.next()) {
                     String fields = rs.getString("fields");
-                    if (fields == null || fields.trim().isEmpty() || 
-                        fields.contains("Please update to the latest Anki version")) {
+                    if (fields == null || fields.trim().isEmpty()
+                            || fields.contains("Please update to the latest Anki version")) {
                         skippedItems++;
                         continue;
                     }
@@ -233,7 +246,9 @@ public class AnkiService {
                     items.add(item);
 
                     if (expression.length() > MAX_EXPRESSION_LENGTH || meaning.length() > MAX_MEANING_LENGTH) {
-                        if (!warnings.contains(WARN_TRUNCATION)) warnings.add(WARN_TRUNCATION);
+                        if (!warnings.contains(WARN_TRUNCATION)) {
+                            warnings.add(WARN_TRUNCATION);
+                        }
                     }
                 }
             }
@@ -245,11 +260,13 @@ public class AnkiService {
 
     private Map<String, List<AnkiItem>> groupByTopic(List<AnkiItem> items) {
         Map<String, List<AnkiItem>> itemsByTopic = new TreeMap<>((a, b) -> {
-            java.util.regex.Matcher mA = java.util.regex.Pattern.compile("\\d+").matcher(a == null ? "" : a);
-            java.util.regex.Matcher mB = java.util.regex.Pattern.compile("\\d+").matcher(b == null ? "" : b);
+            String left = a == null ? "" : a;
+            String right = b == null ? "" : b;
+            java.util.regex.Matcher mA = java.util.regex.Pattern.compile("\\d+").matcher(left);
+            java.util.regex.Matcher mB = java.util.regex.Pattern.compile("\\d+").matcher(right);
             int numA = mA.find() ? Integer.parseInt(mA.group()) : Integer.MAX_VALUE;
             int numB = mB.find() ? Integer.parseInt(mB.group()) : Integer.MAX_VALUE;
-            return numA != numB ? numA - numB : a.compareToIgnoreCase(b);
+            return numA != numB ? numA - numB : left.compareToIgnoreCase(right);
         });
         for (AnkiItem item : items) {
             String topicName = item.getTopic() != null ? item.getTopic() : DEFAULT_TOPIC;
@@ -294,33 +311,40 @@ public class AnkiService {
         StudyItem studyItem = new StudyItem();
         Map<String, String> fields = ankiItem.getFields() != null ? ankiItem.getFields() : new HashMap<>();
         studyItem.setAdditionalData(fields);
-        
+
         String primary = null;
         for (String fn : new String[]{"Expression", "Kanji", "Front"}) {
             String v = fields.get(fn);
-            if (v != null && !v.isBlank()) { primary = v; break; }
+            if (v != null && !v.isBlank()) {
+                primary = v;
+                break;
+            }
         }
         studyItem.setPrimaryText(primary != null && !primary.isBlank() ? primary : (ankiItem.getFront() != null && !ankiItem.getFront().isBlank() ? ankiItem.getFront() : DEFAULT_PLACEHOLDER));
-        
+
         String secondary = null;
         for (String fn : new String[]{"Reading", "Kana", "Furigana"}) {
             String v = fields.get(fn);
-            if (v != null && !v.isBlank()) { secondary = v; break; }
+            if (v != null && !v.isBlank()) {
+                secondary = v;
+                break;
+            }
         }
         studyItem.setSecondaryText(secondary != null && !secondary.isBlank() ? secondary : (ankiItem.getReading() != null && !ankiItem.getReading().isBlank() ? ankiItem.getReading() : DEFAULT_PLACEHOLDER));
-        
+
         String meaning = null;
         for (String fn : new String[]{"Meaning", "English", "Back"}) {
             String v = fields.get(fn);
-            if (v != null && !v.isBlank()) { meaning = v; break; }
+            if (v != null && !v.isBlank()) {
+                meaning = v;
+                break;
+            }
         }
         studyItem.setMeaning(meaning != null && !meaning.isBlank() ? meaning : (ankiItem.getBack() != null && !ankiItem.getBack().isBlank() ? ankiItem.getBack() : DEFAULT_PLACEHOLDER));
-        
+
         studyItem.setTopic(topic);
         return studyItem;
     }
-
-
 
     private void deletePreviousCourses(String courseName, User owner) {
         List<Course> existingCourses = owner == null
@@ -331,7 +355,9 @@ public class AnkiService {
     }
 
     private String cleanText(String text) {
-        if (text == null) return "";
+        if (text == null) {
+            return "";
+        }
         text = text.replaceAll("\\[sound:[^\\]]+\\]", "")
                 .replaceAll("<img[^>]+>", "")
                 .replaceAll("\\[anki:play:[^\\]]+\\]", "")
@@ -346,7 +372,9 @@ public class AnkiService {
     }
 
     private void deleteDirectory(File directory) {
-        if (directory == null || !directory.exists()) return;
+        if (directory == null || !directory.exists()) {
+            return;
+        }
         File[] files = directory.listFiles();
         if (files != null) {
             for (File file : files) {
@@ -365,7 +393,9 @@ public class AnkiService {
         try (Statement stmt = conn.createStatement()) {
             String modelsCol = null;
             try (ResultSet rs = stmt.executeQuery("SELECT models FROM col LIMIT 1")) {
-                if (rs.next()) modelsCol = rs.getString("models");
+                if (rs.next()) {
+                    modelsCol = rs.getString("models");
+                }
             }
             if (modelsCol != null && !modelsCol.isEmpty()) {
                 ObjectMapper mapper = new ObjectMapper();
@@ -375,9 +405,13 @@ public class AnkiService {
                     if (flds != null && flds.isArray()) {
                         for (JsonNode fld : flds) {
                             JsonNode nameNode = fld.get("name");
-                            if (nameNode != null) fieldNames.add(nameNode.asText());
+                            if (nameNode != null) {
+                                fieldNames.add(nameNode.asText());
+                            }
                         }
-                        if (!fieldNames.isEmpty()) break;
+                        if (!fieldNames.isEmpty()) {
+                            break;
+                        }
                     }
                 }
             }
@@ -386,8 +420,6 @@ public class AnkiService {
         }
         return fieldNames;
     }
-
-
 
     private Map<String, String> buildFieldsMap(String[] parts, List<String> fieldNames) {
         Map<String, String> fieldsMap = new HashMap<>();
@@ -401,7 +433,7 @@ public class AnkiService {
         return fieldsMap;
     }
 
+    public record ParseResult(List<AnkiItem> items, int skippedItems, List<String> warnings) {
 
-
-    public record ParseResult(List<AnkiItem> items, int skippedItems, List<String> warnings) {}
+    }
 }
