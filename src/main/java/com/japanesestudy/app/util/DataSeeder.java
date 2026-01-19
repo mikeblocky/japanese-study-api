@@ -2,7 +2,10 @@ package com.japanesestudy.app.util;
 
 import com.japanesestudy.app.entity.Role;
 import com.japanesestudy.app.entity.User;
-import com.japanesestudy.app.repository.Repositories.*;
+import com.japanesestudy.app.repository.CourseRepository;
+import com.japanesestudy.app.repository.TopicRepository;
+import com.japanesestudy.app.repository.StudyItemRepository;
+import com.japanesestudy.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

@@ -1,7 +1,7 @@
 package com.japanesestudy.app.security.service;
 
 import com.japanesestudy.app.entity.User;
-import com.japanesestudy.app.repository.Repositories.*;
+import com.japanesestudy.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

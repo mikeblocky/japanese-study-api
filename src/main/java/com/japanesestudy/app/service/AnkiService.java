@@ -26,12 +26,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.luben.zstd.ZstdInputStream;
 import com.japanesestudy.app.dto.importing.AnkiItem;
-import com.japanesestudy.app.util.EvictAllCaches;
+import com.japanesestudy.app.util.Utils.EvictAllCaches;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
 import com.japanesestudy.app.entity.User;
-import com.japanesestudy.app.repository.Repositories.*;
+import com.japanesestudy.app.repository.CourseRepository;
+import com.japanesestudy.app.repository.TopicRepository;
+import com.japanesestudy.app.repository.StudyItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

@@ -1,13 +1,23 @@
 package com.japanesestudy.app.util;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class ControllerUtils {
+/**
+ * Consolidated utilities for controllers and cache management.
+ */
+public class Utils {
+
+    // === Controller Helpers ===
 
     public static void validateOwnership(Long ownerId, Long userId) {
         if (ownerId != null && !ownerId.equals(userId)) {
@@ -42,4 +52,21 @@ public class ControllerUtils {
     public static ResponseEntity<Map<String, String>> unauthorized(String msg) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", msg));
     }
+
+    // === Cache Eviction Annotations ===
+
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
+    public @interface EvictAllCaches {}
+
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @CacheEvict(cacheNames = {"topicsByCourse", "itemsByTopic"}, allEntries = true)
+    public @interface EvictTopicCaches {}
+
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @CacheEvict(cacheNames = {"itemsByTopic"}, allEntries = true)
+    public @interface EvictItemCaches {}
 }

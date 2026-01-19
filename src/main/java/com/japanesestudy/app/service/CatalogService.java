@@ -3,10 +3,13 @@ package com.japanesestudy.app.service;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
-import com.japanesestudy.app.repository.Repositories.*;
-import com.japanesestudy.app.util.EvictAllCaches;
-import com.japanesestudy.app.util.EvictTopicCaches;
-import com.japanesestudy.app.util.EvictItemCaches;
+import com.japanesestudy.app.repository.CourseRepository;
+import com.japanesestudy.app.repository.TopicRepository;
+import com.japanesestudy.app.repository.StudyItemRepository;
+import com.japanesestudy.app.repository.UserProgressRepository;
+import com.japanesestudy.app.util.Utils.EvictAllCaches;
+import com.japanesestudy.app.util.Utils.EvictTopicCaches;
+import com.japanesestudy.app.util.Utils.EvictItemCaches;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -28,6 +31,11 @@ public class CatalogService {
     @Cacheable(cacheNames = "courses")
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
+    }
+
+    @Cacheable(cacheNames = "courses", condition = "#userId != null")
+    public List<Course> getVisibleCourses(Long userId) {
+        return courseRepository.findByOwnerId(userId);
     }
 
     @Cacheable(cacheNames = "courseById", key = "#courseId")

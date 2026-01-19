@@ -1,0 +1,55 @@
+package com.japanesestudy.app.controller;
+
+import com.japanesestudy.app.entity.StudyItem;
+import com.japanesestudy.app.entity.Topic;
+import com.japanesestudy.app.service.CatalogService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+import static com.japanesestudy.app.util.Utils.*;
+
+@RestController
+@RequestMapping("/api/topics")
+@RequiredArgsConstructor
+public class TopicController {
+
+    private final CatalogService catalogService;
+
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<List<Topic>> getTopicsByCourse(@PathVariable Long courseId) {
+        return ok(catalogService.getTopicsByCourse(courseId));
+    }
+
+    @GetMapping("/{topicId}/items")
+    public ResponseEntity<List<StudyItem>> getItemsByTopic(@PathVariable Long topicId) {
+        return ok(catalogService.getItemsByTopic(topicId));
+    }
+
+    @PostMapping
+    public ResponseEntity<Topic> createTopic(@RequestBody Topic topic) {
+        return created(catalogService.createTopic(topic));
+    }
+
+    @PutMapping("/{topicId}")
+    public ResponseEntity<Topic> updateTopic(
+            @PathVariable Long topicId,
+            @RequestBody Topic updates) {
+        Topic topic = getOrThrow(() -> catalogService.getTopicById(topicId), "Topic not found");
+        
+        // Manual field updates for clarity
+        if (updates.getTitle() != null) topic.setTitle(updates.getTitle());
+        if (updates.getDescription() != null) topic.setDescription(updates.getDescription());
+        if (updates.getOrderIndex() != null) topic.setOrderIndex(updates.getOrderIndex());
+        
+        return ok(catalogService.updateTopic(topic));
+    }
+
+    @DeleteMapping("/{topicId}")
+    public ResponseEntity<Void> deleteTopic(@PathVariable Long topicId) {
+        catalogService.deleteTopic(topicId);
+        return noContent();
+    }
+}
