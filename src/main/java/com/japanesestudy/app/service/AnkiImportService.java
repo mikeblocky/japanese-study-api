@@ -58,7 +58,7 @@ public class AnkiImportService {
         if (owner == null) {
             existingCourses = courseRepository.findByTitle(courseName);
         } else {
-            existingCourses = courseRepository.findByTitleAndOwnerId(courseName, owner.getId());
+            existingCourses = courseRepository.findByTitleAndOwner_Id(courseName, owner.getId());
         }
         courseRepository.deleteAll(existingCourses);
         courseRepository.flush();
