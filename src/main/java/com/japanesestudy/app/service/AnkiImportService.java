@@ -1,5 +1,14 @@
 package com.japanesestudy.app.service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.japanesestudy.app.dto.importing.AnkiImportRequest;
 import com.japanesestudy.app.dto.importing.AnkiItem;
 import com.japanesestudy.app.entity.Course;
@@ -8,14 +17,8 @@ import com.japanesestudy.app.entity.Topic;
 import com.japanesestudy.app.repository.CourseRepository;
 import com.japanesestudy.app.repository.StudyItemRepository;
 import com.japanesestudy.app.repository.TopicRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +36,7 @@ public class AnkiImportService {
 
     /**
      * Import Anki deck with media URL mappings.
+     *
      * @param mediaUrls Map of original filename -> stored URL for media files
      */
     @Transactional(timeout = 300)
@@ -49,11 +53,15 @@ public class AnkiImportService {
         }
 
         String courseName = request.getCourseName() != null ? request.getCourseName() : "Imported Course";
-        List<Course> existingCourses = courseRepository.findByTitle(courseName);
-        for (Course existing : existingCourses) {
-            courseRepository.delete(existing);
+        // Remove prior courses for this owner with the same title; keep other users' data intact
+        List<Course> existingCourses;
+        if (owner == null) {
+            existingCourses = courseRepository.findByTitle(courseName);
+        } else {
+            existingCourses = courseRepository.findByTitleAndOwnerId(courseName, owner.getId());
         }
-        if (!existingCourses.isEmpty()) courseRepository.flush();
+        courseRepository.deleteAll(existingCourses);
+        courseRepository.flush();
 
         Course course = new Course(courseName, request.getDescription(), "Custom");
         course.setOwner(owner);
@@ -62,10 +70,12 @@ public class AnkiImportService {
         Map<String, List<AnkiItem>> itemsByTopic = new TreeMap<>((a, b) -> {
             int numA = extractNumber(a);
             int numB = extractNumber(b);
-            if (numA != numB) return numA - numB;
+            if (numA != numB) {
+                return numA - numB;
+            }
             return a.compareToIgnoreCase(b);
         });
-        
+
         for (AnkiItem item : request.getItems()) {
             String topicName = item.getTopic() != null ? item.getTopic() : "Default";
             itemsByTopic.computeIfAbsent(topicName, k -> new ArrayList<>()).add(item);
@@ -88,20 +98,26 @@ public class AnkiImportService {
                 Map<String, String> fields = ankiItem.getFields() != null ? ankiItem.getFields() : new java.util.HashMap<>();
                 studyItem.setAdditionalData(fields);
 
-                String primaryText = fields.getOrDefault("Expression", 
-                    fields.getOrDefault("Kanji", 
-                    fields.getOrDefault("Front", ankiItem.getFront())));
-                if (primaryText == null || primaryText.isBlank()) primaryText = "-";
+                String primaryText = fields.getOrDefault("Expression",
+                        fields.getOrDefault("Kanji",
+                                fields.getOrDefault("Front", ankiItem.getFront())));
+                if (primaryText == null || primaryText.isBlank()) {
+                    primaryText = "-";
+                }
 
                 String secondaryText = fields.getOrDefault("Reading",
-                    fields.getOrDefault("Kana",
-                    fields.getOrDefault("Furigana", ankiItem.getReading())));
-                if (secondaryText == null || secondaryText.isBlank()) secondaryText = primaryText;
+                        fields.getOrDefault("Kana",
+                                fields.getOrDefault("Furigana", ankiItem.getReading())));
+                if (secondaryText == null || secondaryText.isBlank()) {
+                    secondaryText = primaryText;
+                }
 
                 String meaning = fields.getOrDefault("Meaning",
-                    fields.getOrDefault("English",
-                    fields.getOrDefault("Back", ankiItem.getBack())));
-                if (meaning == null || meaning.isBlank()) meaning = "-";
+                        fields.getOrDefault("English",
+                                fields.getOrDefault("Back", ankiItem.getBack())));
+                if (meaning == null || meaning.isBlank()) {
+                    meaning = "-";
+                }
 
                 studyItem.setPrimaryText(primaryText);
                 studyItem.setSecondaryText(secondaryText);
@@ -142,25 +158,28 @@ public class AnkiImportService {
     }
 
     private int extractNumber(String title) {
-        if (title == null) return Integer.MAX_VALUE;
+        if (title == null) {
+            return Integer.MAX_VALUE;
+        }
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(title);
         return m.find() ? Integer.parseInt(m.group()) : Integer.MAX_VALUE;
     }
 
     /**
-     * Extracts media references from AnkiItem fields and sets URLs on StudyItem.
+     * Extracts media references from AnkiItem fields and sets URLs on
+     * StudyItem.
      */
     private void extractAndSetMedia(StudyItem studyItem, AnkiItem ankiItem, Map<String, String> mediaUrls) {
         StringBuilder audioUrls = new StringBuilder();
         StringBuilder imageUrls = new StringBuilder();
 
         // Combine all text fields to search for media references
-        String allText = String.join(" ", 
-            ankiItem.getFront() != null ? ankiItem.getFront() : "",
-            ankiItem.getBack() != null ? ankiItem.getBack() : "",
-            ankiItem.getReading() != null ? ankiItem.getReading() : ""
+        String allText = String.join(" ",
+                ankiItem.getFront() != null ? ankiItem.getFront() : "",
+                ankiItem.getBack() != null ? ankiItem.getBack() : "",
+                ankiItem.getReading() != null ? ankiItem.getReading() : ""
         );
-        
+
         if (ankiItem.getFields() != null) {
             for (String value : ankiItem.getFields().values()) {
                 allText += " " + (value != null ? value : "");
@@ -174,7 +193,9 @@ public class AnkiImportService {
             String filename = soundMatcher.group(1);
             String url = mediaUrls.get(filename);
             if (url != null) {
-                if (audioUrls.length() > 0) audioUrls.append(",");
+                if (audioUrls.length() > 0) {
+                    audioUrls.append(",");
+                }
                 audioUrls.append(url);
             }
         }
@@ -186,7 +207,9 @@ public class AnkiImportService {
             String filename = imgMatcher.group(1);
             String url = mediaUrls.get(filename);
             if (url != null) {
-                if (imageUrls.length() > 0) imageUrls.append(",");
+                if (imageUrls.length() > 0) {
+                    imageUrls.append(",");
+                }
                 imageUrls.append(url);
             }
         }
