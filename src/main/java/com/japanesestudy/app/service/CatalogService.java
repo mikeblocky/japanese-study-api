@@ -3,9 +3,10 @@ package com.japanesestudy.app.service;
 import com.japanesestudy.app.entity.Course;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
-import com.japanesestudy.app.repository.CourseRepository;
-import com.japanesestudy.app.repository.StudyItemRepository;
-import com.japanesestudy.app.repository.TopicRepository;
+import com.japanesestudy.app.repository.Repositories.*;
+import com.japanesestudy.app.util.EvictAllCaches;
+import com.japanesestudy.app.util.EvictTopicCaches;
+import com.japanesestudy.app.util.EvictItemCaches;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,7 +23,7 @@ public class CatalogService {
     private final CourseRepository courseRepository;
     private final TopicRepository topicRepository;
     private final StudyItemRepository studyItemRepository;
-    private final com.japanesestudy.app.repository.UserProgressRepository userProgressRepository;
+    private final UserProgressRepository userProgressRepository;
 
     @Cacheable(cacheNames = "courses")
     public List<Course> getAllCourses() {
@@ -68,37 +69,37 @@ public class CatalogService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
+    @EvictAllCaches
     public Course createCourse(Course course) {
         return courseRepository.save(course);
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
+    @EvictAllCaches
     public Course updateCourse(Course course) {
         return courseRepository.save(course);
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"courses", "courseById", "topicsByCourse", "itemsByTopic"}, allEntries = true)
+    @EvictAllCaches
     public void deleteCourse(long courseId) {
         courseRepository.deleteById(courseId);
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"topicsByCourse", "itemsByTopic"}, allEntries = true)
+    @EvictTopicCaches
     public Topic createTopic(Topic topic) {
         return topicRepository.save(topic);
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"topicsByCourse", "itemsByTopic"}, allEntries = true)
+    @EvictTopicCaches
     public Topic updateTopic(Topic topic) {
         return topicRepository.save(topic);
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"topicsByCourse", "itemsByTopic"}, allEntries = true)
+    @EvictTopicCaches
     public void deleteTopic(long topicId) {
         topicRepository.deleteById(topicId);
     }
@@ -108,19 +109,19 @@ public class CatalogService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"itemsByTopic"}, allEntries = true)
+    @EvictItemCaches
     public StudyItem createStudyItem(StudyItem item) {
         return studyItemRepository.save(item);
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"itemsByTopic"}, allEntries = true)
+    @EvictItemCaches
     public StudyItem updateStudyItem(StudyItem item) {
         return studyItemRepository.save(item);
     }
 
     @Transactional
-    @CacheEvict(cacheNames = {"itemsByTopic"}, allEntries = true)
+    @EvictItemCaches
     public void deleteStudyItem(long itemId) {
         studyItemRepository.deleteById(itemId);
     }
@@ -134,22 +135,17 @@ public class CatalogService {
     public int reorderTopicsByTitle(long courseId) {
         List<Topic> topics = topicRepository.findByCourseIdOrderByOrderIndexAsc(courseId);
         topics.sort((a, b) -> {
-            int numA = extractNumber(a.getTitle());
-            int numB = extractNumber(b.getTitle());
+            java.util.regex.Matcher mA = java.util.regex.Pattern.compile("\\d+").matcher(a.getTitle() == null ? "" : a.getTitle());
+            java.util.regex.Matcher mB = java.util.regex.Pattern.compile("\\d+").matcher(b.getTitle() == null ? "" : b.getTitle());
+            int numA = mA.find() ? Integer.parseInt(mA.group()) : Integer.MAX_VALUE;
+            int numB = mB.find() ? Integer.parseInt(mB.group()) : Integer.MAX_VALUE;
             if (numA != numB) return numA - numB;
             return a.getTitle().compareToIgnoreCase(b.getTitle());
         });
-        for (int i = 0; i < topics.size(); i++) {
-            topics.get(i).setOrderIndex(i);
-        }
+        for (int i = 0; i < topics.size(); i++) topics.get(i).setOrderIndex(i);
         topicRepository.saveAll(topics);
         return topics.size();
     }
 
-    private int extractNumber(String title) {
-        if (title == null) return Integer.MAX_VALUE;
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(title);
-        if (m.find()) return Integer.parseInt(m.group());
-        return Integer.MAX_VALUE;
-    }
+
 }

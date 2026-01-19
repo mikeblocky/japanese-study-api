@@ -2,7 +2,7 @@ package com.japanesestudy.app.util;
 
 import com.japanesestudy.app.entity.Role;
 import com.japanesestudy.app.entity.User;
-import com.japanesestudy.app.repository.UserRepository;
+import com.japanesestudy.app.repository.Repositories.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -19,7 +19,6 @@ public class DataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Override
     public void run(String... args) {
         if (userRepository.count() == 0) {
             log.info("Seeding default admin user...");

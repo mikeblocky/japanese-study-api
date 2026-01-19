@@ -34,7 +34,6 @@ public class JsonMapConverter implements AttributeConverter<Map<String, String>,
         try {
             return objectMapper.readValue(dbData, new TypeReference<Map<String, String>>() {});
         } catch (IOException e) {
-            // Log error or handle gracefully
             return new HashMap<>();
         }
     }

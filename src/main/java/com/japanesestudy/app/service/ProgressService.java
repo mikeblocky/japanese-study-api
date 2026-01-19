@@ -1,13 +1,10 @@
 package com.japanesestudy.app.service;
 
-import com.japanesestudy.app.dto.progress.ProgressResponse;
-import com.japanesestudy.app.dto.progress.ProgressStatsResponse;
+import com.japanesestudy.app.dto.progress.ProgressDtos.*;
 import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.User;
 import com.japanesestudy.app.entity.UserProgress;
-import com.japanesestudy.app.repository.StudyItemRepository;
-import com.japanesestudy.app.repository.UserProgressRepository;
-import com.japanesestudy.app.repository.UserRepository;
+import com.japanesestudy.app.repository.Repositories.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

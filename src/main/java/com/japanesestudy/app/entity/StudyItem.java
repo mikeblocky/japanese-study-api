@@ -41,14 +41,6 @@ public class StudyItem {
     @Column(columnDefinition = "TEXT")
     private Map<String, String> additionalData = new HashMap<>();
 
-    /** URL/path to image media for this study item */
-    @Column(columnDefinition = "TEXT")
-    private String imageUrl;
-
-    /** URL/path to audio media for this study item */
-    @Column(columnDefinition = "TEXT")
-    private String audioUrl;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "topic_id")
     @JsonIgnore
