@@ -17,6 +17,7 @@ import com.japanesestudy.app.entity.StudyItem;
 import com.japanesestudy.app.entity.Topic;
 import com.japanesestudy.app.security.service.UserDetailsImpl;
 import com.japanesestudy.app.service.CatalogService;
+import com.japanesestudy.app.service.CatalogService.TopicSummary;
 import static com.japanesestudy.app.util.Utils.created;
 import static com.japanesestudy.app.util.Utils.getOrThrow;
 import static com.japanesestudy.app.util.Utils.noContent;
@@ -47,6 +48,11 @@ public class TopicController {
         return created(catalogService.createTopic(topic));
     }
 
+    @GetMapping("/{topicId}/summary")
+    public ResponseEntity<TopicSummary> getTopicSummary(@PathVariable Long topicId) {
+        return ok(catalogService.getTopicSummary(topicId));
+    }
+
     @PostMapping("/{topicId}/items")
     public ResponseEntity<StudyItem> addItemToTopic(
             @PathVariable Long topicId,
@@ -54,7 +60,8 @@ public class TopicController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         Topic topic = getOrThrow(() -> catalogService.getTopicById(topicId), "Topic not found");
         if (topic.getCourse() != null) {
-            validateOwnership(topic.getCourse().getOwner() != null ? topic.getCourse().getOwner().getId() : null, userDetails.getId());
+            Long ownerId = topic.getCourse().getOwner() != null ? topic.getCourse().getOwner().getId() : null;
+            validateOwnership(ownerId, userDetails.getId());
         }
         item.setTopic(topic);
         return created(catalogService.createStudyItem(item));

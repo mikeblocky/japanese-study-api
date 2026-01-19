@@ -47,6 +47,13 @@ public class CatalogService {
     }
 
     @Transactional(readOnly = true)
+    public CourseSummary getCourseSummary(long courseId) {
+        long topics = topicRepository.countByCourseId(courseId);
+        long items = studyItemRepository.countByCourseId(courseId);
+        return new CourseSummary(topics, items);
+    }
+
+    @Transactional(readOnly = true)
     @Cacheable(cacheNames = "topicsByCourse", key = "#courseId")
     public List<Topic> getTopicsByCourse(long courseId) {
         return topicRepository.findByCourseIdOrderByOrderIndexAsc(courseId);
@@ -122,7 +129,13 @@ public class CatalogService {
     }
 
     public Optional<Topic> getTopicById(long topicId) {
-        return topicRepository.findById(topicId);
+        return topicRepository.findByIdWithCourse(topicId);
+    }
+
+    @Transactional(readOnly = true)
+    public TopicSummary getTopicSummary(long topicId) {
+        long items = studyItemRepository.countByTopicId(topicId);
+        return new TopicSummary(items);
     }
 
     @Transactional
@@ -145,6 +158,14 @@ public class CatalogService {
 
     public Optional<StudyItem> getStudyItemById(long itemId) {
         return studyItemRepository.findById(itemId);
+    }
+
+    public record CourseSummary(long topics, long items) {
+
+    }
+
+    public record TopicSummary(long items) {
+
     }
 
     @Transactional

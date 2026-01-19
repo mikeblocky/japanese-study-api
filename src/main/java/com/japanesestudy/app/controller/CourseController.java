@@ -18,6 +18,7 @@ import com.japanesestudy.app.entity.Topic;
 import com.japanesestudy.app.entity.User;
 import com.japanesestudy.app.security.service.UserDetailsImpl;
 import com.japanesestudy.app.service.CatalogService;
+import com.japanesestudy.app.service.CatalogService.CourseSummary;
 import static com.japanesestudy.app.util.Utils.created;
 import static com.japanesestudy.app.util.Utils.getOrThrow;
 import static com.japanesestudy.app.util.Utils.noContent;
@@ -52,6 +53,21 @@ public class CourseController {
         }
 
         return created(catalogService.createTopic(topic));
+    }
+
+    @GetMapping("/{courseId}/summary")
+    public ResponseEntity<CourseSummary> getCourseSummary(@PathVariable Long courseId) {
+        return ok(catalogService.getCourseSummary(courseId));
+    }
+
+    @PostMapping("/{courseId}/topics/reorder")
+    public ResponseEntity<Integer> reorderTopicsAlphabetically(
+            @PathVariable Long courseId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        Course course = getOrThrow(() -> catalogService.getCourseById(courseId), "Course not found");
+        validateOwnership(course.getOwner() != null ? course.getOwner().getId() : null, userDetails.getId());
+        int count = catalogService.reorderTopicsByTitle(courseId);
+        return ok(count);
     }
 
     @GetMapping
